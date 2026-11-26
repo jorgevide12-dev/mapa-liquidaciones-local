@@ -1,4 +1,4 @@
-const CACHE='mll-html-v07-shell';
+const CACHE='mll-html-v08-shell';
 const SHELL=['./','./index.html','./manifest.webmanifest','./mll.svg','./mll-192.png','./mll-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

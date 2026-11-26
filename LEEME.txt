@@ -1,5 +1,12 @@
-MLL v0.7 HTML5 / PWA
+MLL v0.8 HTML5 / PWA
 ====================
+
+NOVEDADES v0.8
+- Nuevo gráfico principal: mapa de calor de liquidaciones ESTIMADAS sobre velas (500 velas), con perfil de densidad a la derecha, eje de precio y de tiempo, arrastre, pellizco para zoom y doble toque para volver al presente.
+- Presets Todo / Scalping / Swing (apalancamientos 5x-100x) y control de intensidad.
+- Metodologia: cada vela aporta el cambio de Open Interest (o volumen si el OI no esta disponible), repartido en apalancamientos tipicos; longs/shorts segun el volumen agresor (taker buy); se proyecta el precio de liquidacion y el nivel desaparece cuando el precio lo toca. Es un MODELO, no posiciones reales.
+- Liquidaciones reales observadas (forceOrder) se dibujan como circulos sobre el grafico.
+- Nuevas tarjetas: cluster estimado mas fuerte arriba (shorts) y abajo (longs).
 
 NOVEDADES v0.7
 - Corregido: los WebSockets de la moneda anterior ya no se reconectan al cambiar de moneda o intervalo.
