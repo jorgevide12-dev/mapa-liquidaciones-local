@@ -14,6 +14,19 @@
 @media(min-width:700px){.app{padding:0 22px}.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.two{display:grid;grid-template-columns:1.15fr .85fr;gap:10px}.two .panel{margin-top:10px}.chartbox{height:320px}.head h1{font-size:27px}}
 
 .heatpanel{padding:10px 8px 12px}.heatpanel .panel-title{padding:0 4px}.hctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 4px 8px}.chips{display:flex;gap:3px;padding:3px;background:#0b1320;border:1px solid var(--line);border-radius:8px}.chips button{border:0;background:transparent;color:var(--muted);padding:7px 10px;border-radius:6px;font-size:11px;font-weight:700}.chips button.active{background:#263750;color:#ffd17d}.intens{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);flex:1;min-width:150px}.intens input{flex:1;-webkit-appearance:none;appearance:none;height:8px;border-radius:5px;outline:none;background:linear-gradient(90deg,#1c3078,#2468c8,#26aab0,#46ba5a,#f0cd34,#ec342a)}.intens input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #150c33;box-shadow:0 0 0 1px rgba(255,255,255,.5)}.intens input::-moz-range-track{height:8px;border-radius:5px;background:linear-gradient(90deg,#1c3078,#2468c8,#26aab0,#46ba5a,#f0cd34,#ec342a)}.intens input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #150c33}.intens b{color:var(--text);min-width:32px;text-align:right}.subbox{height:120px;margin-top:4px;border-radius:8px;overflow:hidden;background:#150c33}.subbox canvas{width:100%;height:100%;display:block;touch-action:pan-y}.heatbox{height:min(66vh,580px);min-height:380px;margin-top:4px;border-radius:8px;overflow:hidden;background:#150c33}.heatbox canvas{width:100%;height:100%;display:block;touch-action:pan-y}.grad{display:inline-block;width:110px;height:7px;border-radius:4px;vertical-align:middle;margin:0 6px;background:linear-gradient(90deg,#1c3078,#2468c8,#26aab0,#46ba5a,#f0cd34,#ec342a)}.heatpanel .legend,.heatpanel .fine{padding:0 4px}
+
+.verdict{margin:12px 4px 2px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#0b1320}
+.vhead{display:flex;align-items:center;gap:12px}
+.vhead b{display:block;font-size:13px}.vhead small{display:block;color:var(--muted);font-size:10.5px;margin-top:2px}
+.vpill{min-width:78px;text-align:center;padding:9px 10px;border-radius:9px;font-weight:850;font-size:14px;letter-spacing:.5px}
+.vpill.LONG{background:#20c99722;color:var(--green);border:1px solid #20c99766}
+.vpill.SHORT{background:#ef647822;color:var(--red);border:1px solid #ef647866}
+.vpill.ESPERAR{background:#f3ad4322;color:var(--gold);border:1px solid #f3ad4366}
+.vstats{display:flex;gap:6px;margin:10px 0 8px;flex-wrap:wrap}
+.vstats span{flex:1;min-width:84px;background:#111d2e;border-radius:8px;padding:7px 8px;font-size:10px;color:var(--muted)}
+.vstats b{display:block;font-size:13px;margin-top:2px}.vstats .up{color:var(--green)}.vstats .down{color:var(--red)}.vstats .flat{color:var(--text)}
+.vtext{margin:0 0 6px;font-size:12px;line-height:1.5;color:var(--text)}
+.vnote{display:block;font-size:9.5px;color:var(--muted);line-height:1.4}
 </style>
 </head>
 <body>
@@ -25,7 +38,7 @@
 <div class="hctl"><div class="chips" id="exch"><button data-x="all">Todos</button><button data-x="binance">Binance</button><button data-x="bybit">Bybit</button><button data-x="okx">OKX</button></div><span class="sub" id="exState" style="font-size:9px"></span><div class="chips" id="presets"><button data-p="all">Todo</button><button data-p="scalp">Scalping</button><button data-p="swing">Swing</button></div><label class="intens">Intensidad<input id="intensity" type="range" min="0" max="100" value="37"><b id="intensityLabel">37%</b></label><button id="resetView" class="btn" style="padding:7px 10px">Ahora</button></div>
 <div class="heatbox"><canvas id="chart"></canvas></div><div class="subbox"><canvas id="oiC"></canvas></div><div class="subbox"><canvas id="cvdC"></canvas></div>
 <div class="legend"><span>Densidad estimada: baja<span class="grad"></span>alta</span><span><i style="background:#2fbe64"></i>Perfil: SHORT (arriba) · <i style="background:#f0463e"></i>LONG (abajo)</span><span><i style="background:#ef6478"></i>Evento LONG real</span><span><i style="background:#20c997"></i>Evento SHORT real</span></div>
-<p class="fine">Elige Todos, Binance, Bybit u OKX: cada exchange aporta su propio Open Interest (Binance y Bybit) o volumen (OKX) y los niveles se suman en el mismo mapa; los círculos son liquidaciones reales de ese exchange. Los colores son un modelo, no posiciones reales: se reparten el cambio de Open Interest (o el volumen si no está disponible) de cada vela entre apalancamientos típicos, separando longs y shorts con el flujo agresor, y se proyectan sus precios de liquidación. Cada nivel desaparece cuando el precio lo toca. Los círculos son liquidaciones reales observadas en esta sesión. Barras de la derecha: densidad de los niveles aún vigentes. Paneles inferiores: Open Interest en USD (línea) con su cambio por vela (barras: verde = se abren posiciones, rojo = se cierran) y CVD, el volumen agresor acumulado (compras menos ventas a mercado), con su delta por vela.</p></section>
+<div class="verdict" id="verdict"></div></section>
 <section class="grid">
  <div class="metric"><label>PRECIO ACTUAL</label><strong id="price">Cargando…</strong><small id="change">--</small></div>
  <div class="metric"><label>INTERÉS ABIERTO</label><strong id="oi">--</strong><small id="oiUnits">Valor nocional aproximado</small></div>
@@ -108,6 +121,38 @@ x.fillStyle='rgba(255,255,255,.08)';x.fillRect(left,mid,hr-left,1);
 let m=0;for(let i=start;i<end;i++){const d=barArr[i];if(d!=null)m=Math.max(m,Math.abs(d))}
 if(m>0)for(let i=start;i<end;i++){const d=barArr[i];if(d==null)continue;const h=Math.max(1,Math.abs(d)/m*(bh/2-1));x.fillStyle=d>=0?'#2ee6a8':'#ff5a72';x.fillRect(xs(i)-cw/2,d>=0?mid-h:mid,cw,h)}
 if(m>0){x.fillStyle='#8f84b8';x.fillText(fmtK(m),hr+4,by0+8)}}
+
+const WIN={'5m':12,'15m':12,'1h':12,'4h':10,'1d':7};
+const THR={'5m':[.0006,.0012],'15m':[.0012,.002],'1h':[.0025,.004],'4h':[.005,.008],'1d':[.012,.015]};
+function fmtSpan(ms){const m=Math.round(ms/6e4);return m<60?m+' min':m<2880?Math.round(m/60)+' h':Math.round(m/1440)+' días'}
+function pctTxt(v){return(v>=0?'+':'')+(v*100).toFixed(2)+'%'}
+function renderVerdict(C,cvdL,oiL){
+const el=$('verdict');if(!el)return;const N=C.length;if(N<4)return;
+const iv=state.interval,k=Math.min(WIN[iv]||12,N-1),b=N-1,a=b-k,[pt,ot]=THR[iv]||THR['15m'];
+const pc=C[b].c/C[a].c-1;let vol=0;for(let i=a+1;i<=b;i++)vol+=C[i].q;
+const cr=vol>0?(cvdL[b]-cvdL[a])/vol:0,hasO=oiL[a]!=null&&oiL[b]!=null,o=hasO?oiL[b]/oiL[a]-1:null;
+const P=pc>pt?1:pc<-pt?-1:0,O=hasO?(o>ot?1:o<-ot?-1:0):0,V=cr>.02?1:cr<-.02?-1:0;
+let s='ESPERAR',conf='Baja',t='Las señales no coinciden o son muy débiles en esta temporalidad. Mejor esperar confirmación.';
+const R=(x,c,y)=>{s=x;conf=c;t=y};
+if(P===1){
+ if(O===1){V===1?R('LONG','Alta','Sube con más posiciones abiertas y compra agresiva real: entran longs con respaldo.'):V===-1?R('SHORT','Media','Divergencia bajista: el precio sube y el OI crece, pero dominan las ventas a mercado. Posible trampa alcista; short en resistencia.'):R('LONG','Baja','Sube con OI creciente, pero el CVD no confirma. Long solo en retrocesos.')}
+ else if(O===-1){V===-1?R('SHORT','Media','Sube por cierre de shorts y sin compradores agresivos: movimiento débil que puede agotarse.'):R('ESPERAR','Baja','Sube por cierre de shorts (squeeze), no por posiciones nuevas. Poca convicción para perseguir el precio.')}
+ else{V===1?R('LONG','Media','Sube con compra agresiva y OI estable: flujo comprador sano.'):V===-1?R('SHORT','Baja','Sube pero el flujo agresor es vendedor: subida frágil.'):R('ESPERAR','Baja','Sube sin cambios claros en OI ni CVD.')}
+}else if(P===-1){
+ if(O===1){V===-1?R('SHORT','Alta','Cae con más posiciones abiertas y venta agresiva: entran shorts con respaldo.'):V===1?R('LONG','Baja','Divergencia alcista: cae pero hay compra agresiva absorbiendo. Posible rebote; long de riesgo con stop corto.'):R('SHORT','Baja','Cae con OI creciente, el CVD no confirma. Short solo en rebotes.')}
+ else if(O===-1){V===1?R('LONG','Media','Cae por cierre de longs pero entra compra agresiva: posible capitulación y rebote.'):R('ESPERAR','Baja','Cae por cierre de longs (liquidación), sin posiciones nuevas. Espera a que se estabilice.')}
+ else{V===-1?R('SHORT','Media','Cae con venta agresiva y OI estable: flujo vendedor.'):V===1?R('LONG','Baja','Cae pero el flujo agresor es comprador: divergencia alcista.'):R('ESPERAR','Baja','Cae sin cambios claros en OI ni CVD.')}
+}else{
+ if(O===1&&V===1)R('LONG','Baja','Precio lateral con OI y compra agresiva al alza: posible acumulación antes de romper.');
+ else if(O===1&&V===-1)R('SHORT','Baja','Precio lateral con OI al alza y venta agresiva: posible distribución antes de caer.');
+ else R('ESPERAR','Baja','Precio lateral y sin flujo claro. Mejor esperar ruptura.');
+}
+if(!hasO&&conf==='Alta')conf='Media';
+const cls=v=>v>0?'up':v<0?'down':'flat';
+const html=`<div class="vhead"><span class="vpill ${s}">${s}</span><div><b>Veredicto OI + CVD · ${iv==='1d'?'1D':iv}</b><small>Ventana: últimas ${k} velas (${fmtSpan(k*(IV[iv]||0))}) · confianza ${conf}</small></div></div>`+
+`<div class="vstats"><span>Precio<b class="${cls(P)}">${pctTxt(pc)}</b></span><span>Open Interest<b class="${cls(O)}">${hasO?pctTxt(o):'--'}</b></span><span>CVD / volumen<b class="${cls(V)}">${pctTxt(cr)}</b></span></div>`+
+`<p class="vtext">${t}${hasO?'':' (OI no disponible: lectura solo con precio y CVD.)'}</p><small class="vnote">Lectura del flujo reciente de Binance Futures; cambia al elegir otra temporalidad. No garantiza resultado: confirma con tu estrategia y usa stop.</small>`;
+if(el._h!==html){el._h=html;el.innerHTML=html}}
 function drawSubs(start,end,count,colW,left,hr){
 const C=state.candles,N=C.length,oc=$('oiC'),cc=$('cvdC');if(!oc||!cc||N<2)return;
 const cvdL=new Array(N),cvdD=new Array(N);let cum=0;for(let i=0;i<N;i++){const c=C[i],d=(2*c.tb-c.v)*c.c;cum+=d;cvdD[i]=d;cvdL[i]=cum}
@@ -116,6 +161,7 @@ if(state.oiLvl){let prev=null;for(let i=0;i<N;i++){let v=state.oiLvl.get(C[i].t)
 const k=Math.max(1,Math.min(12,count-1)),b=end-1,a=Math.max(0,b-k),pc=C[b].c/C[a].c-1;
 let oiRead='';if(oiL[a]!=null&&oiL[b]!=null){const o=oiL[b]/oiL[a]-1;oiRead=Math.abs(o)<.0005?'OI plano':pc>=0?(o>=0?'Precio↑ OI↑ · entran longs':'Precio↑ OI↓ · cierre de shorts'):(o>=0?'Precio↓ OI↑ · entran shorts':'Precio↓ OI↓ · cierre de longs')}
 const cd=cvdL[b]-cvdL[a];let cvdRead=pc<-.0005&&cd>0?'Div. alcista':pc>.0005&&cd<0?'Div. bajista':cd>=0?'Compra agresiva':'Venta agresiva';
+renderVerdict(C,cvdL,oiL);
 subPanel(oc,start,end,colW,left,hr,'Open Interest · Binance (USD)',oiRead,oiL,oiD,'#f3ad43');
 subPanel(cc,start,end,colW,left,hr,'CVD · Binance',cvdRead,cvdL,cvdD,'#5ac8fa')}
 function drawChart(){
