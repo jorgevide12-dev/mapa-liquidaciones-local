@@ -24,7 +24,7 @@
 <section class="panel heatpanel"><div class="panel-title"><div><h2>Mapa de calor de liquidaciones estimadas</h2><div class="sub">Futuros · <span id="chartSymbol">BTCUSDT</span> · arrastra para mover · pellizca para acercar · doble toque para volver</div></div><span class="tag" id="chartState">CARGANDO</span></div>
 <div class="hctl"><div class="chips" id="presets"><button data-p="all">Todo</button><button data-p="scalp">Scalping</button><button data-p="swing">Swing</button></div><label class="intens">Intensidad<input id="intensity" type="range" min="0" max="100" value="37"><b id="intensityLabel">37%</b></label><button id="resetView" class="btn" style="padding:7px 10px">Ahora</button></div>
 <div class="heatbox"><canvas id="chart"></canvas></div>
-<div class="legend"><span>Densidad estimada: baja<span class="grad"></span>alta</span><span><i style="background:#ef6478"></i>Evento LONG real</span><span><i style="background:#20c997"></i>Evento SHORT real</span></div>
+<div class="legend"><span>Densidad estimada: baja<span class="grad"></span>alta</span><span><i style="background:#2fbe64"></i>Perfil: SHORT (arriba) · <i style="background:#f0463e"></i>LONG (abajo)</span><span><i style="background:#ef6478"></i>Evento LONG real</span><span><i style="background:#20c997"></i>Evento SHORT real</span></div>
 <p class="fine">Los colores son un modelo, no posiciones reales: se reparten el cambio de Open Interest (o el volumen si no está disponible) de cada vela entre apalancamientos típicos, separando longs y shorts con el flujo agresor, y se proyectan sus precios de liquidación. Cada nivel desaparece cuando el precio lo toca. Los círculos son liquidaciones reales observadas en esta sesión. Barras de la derecha: densidad de los niveles aún vigentes.</p></section>
 <section class="grid">
  <div class="metric"><label>PRECIO ACTUAL</label><strong id="price">Cargando…</strong><small id="change">--</small></div>
@@ -91,15 +91,17 @@ let lo=Infinity,hi=-Infinity;for(let i=start;i<end;i++){lo=Math.min(lo,C[i].l);h
 const px=state.price||C[N-1].c;lo=Math.min(lo,px);hi=Math.max(hi,px);
 const span=Math.max(hi-lo,px*.04),mid=(hi+lo)/2,pad=span*.1,min=mid-span/2-pad,max=mid+span/2+pad;
 const y=p=>top+(max-p)/(max-min)*plotH;
-const rows=Math.max(24,Math.floor(plotH/6)),bin=(max-min)/rows,rowH=plotH/rows;
+const rows=Math.round(Math.min(80,Math.max(20,(max-min)/(px*.0007)))),bin=(max-min)/rows,rowH=plotH/rows;
 const grid=new Float32Array(count*rows);let gmax=0;
-if(state.heat){for(const lv of state.heat){if(lv.i0>=end||lv.i1<start)continue;const r=Math.floor((lv.p-min)/bin);if(r<0||r>=rows)continue;const a=Math.max(lv.i0,start)-start,b=Math.min(lv.i1,end-1)-start;for(let c=a;c<=b;c++)grid[c*rows+r]+=lv.w}for(let k=0;k<grid.length;k++)if(grid[k]>gmax)gmax=grid[k]}
-const scale=gmax*(1.05-state.intensity/100*.9)||1;
-for(let c=0;c<count;c++){const x=left+c*colW;for(let r=0;r<rows;r++){const v=grid[c*rows+r];if(v<=0)continue;const n=Math.pow(Math.min(1,v/scale),1.2);if(n<.1)continue;ctx.fillStyle=LUT[(n*63)|0];ctx.fillRect(x,top+(rows-1-r)*rowH,colW+.6,rowH+.6)}}
+if(state.heat){for(const lv of state.heat){if(lv.i0>=end||lv.i1<start)continue;const r=Math.floor((lv.p-min)/bin);if(r<0||r>=rows)continue;const a=Math.max(lv.i0,start)-start,b=Math.min(lv.i1,end-1)-start;for(let c=a;c<=b;c++)grid[c*rows+r]+=lv.w}const nz=[];for(let k=0;k<grid.length;k++)if(grid[k]>0)nz.push(grid[k]);if(nz.length){const sd=Float32Array.from(nz).sort();gmax=sd[Math.min(sd.length-1,Math.floor(sd.length*.97))]}}
+const thr=gmax*state.intensity/100,rng=(gmax-thr)||1;
+for(let c=0;c<count;c++){const x=left+c*colW;for(let r=0;r<rows;r++){const v=grid[c*rows+r];if(v<=0||v<thr)continue;const n=Math.pow(Math.min(1,(v-thr)/rng),.8);ctx.fillStyle=LUT[(n*63)|0];ctx.fillRect(x,top+(rows-1-r)*rowH,colW+.6,rowH+.6)}}
 const hx=left+heatW,hr=hx+histW;
 ctx.fillStyle='rgba(8,5,25,.55)';ctx.fillRect(hx+4,top,histW-2,plotH);
-let hmax=0;for(let r=0;r<rows;r++)hmax=Math.max(hmax,grid[(count-1)*rows+r]);
-if(hmax>0)for(let r=0;r<rows;r++){const v=grid[(count-1)*rows+r];if(v<=0)continue;const n=v/hmax;ctx.fillStyle=n<.4?'#2fa35a':n<.75?'#d6b52e':'#e8453c';const len=Math.max(1,n*(histW-8));ctx.fillRect(hr-len,top+(rows-1-r)*rowH,len,Math.max(1,rowH-.6))}
+const lcI=(count-1)*rows,col=[];let sS=0,sL=0;for(let r=0;r<rows;r++){const v=grid[lcI+r];if(v>0){col.push(v);if(min+(r+.5)*bin>px)sS+=v;else sL+=v}}
+let hmax=0;if(col.length){const sd=Float32Array.from(col).sort();hmax=sd[Math.min(sd.length-1,Math.floor(sd.length*.95))]}
+if(hmax>0){for(let r=0;r<rows;r++){const v=grid[lcI+r];if(v<=0)continue;const n=Math.min(1,v/hmax),short=min+(r+.5)*bin>px;ctx.fillStyle=(short?'rgba(47,190,100,':'rgba(240,70,62,')+(.4+.6*n).toFixed(2)+')';const len=Math.max(1,n*(histW-8));ctx.fillRect(hr-len,top+(rows-1-r)*rowH,len,Math.max(1,rowH-.8))}
+ctx.font='9px system-ui';ctx.textAlign='right';const fm=x=>x>=1e6?(x/1e6).toFixed(1)+'M':(x/1e3).toFixed(0)+'K';ctx.fillStyle='#2fbe64';ctx.fillText('S '+fm(sS),hr-3,top+10);ctx.fillStyle='#f0463e';ctx.fillText('L '+fm(sL),hr-3,top+plotH-4);ctx.textAlign='left'}
 const st=niceStep((max-min)/8);ctx.font='10px system-ui';ctx.textAlign='left';
 for(let p=Math.ceil(min/st)*st;p<=max;p+=st){const yy=y(p);ctx.fillStyle='rgba(255,255,255,.05)';ctx.fillRect(left,yy,heatW+histW,1);ctx.fillStyle='#8f84b8';ctx.fillText(money(p,st<1?2:0),hr+5,yy+3)}
 const cw=Math.max(1,colW*.62);
