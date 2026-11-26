@@ -1,5 +1,12 @@
-MLL v0.6 HTML5 / PWA
+MLL v0.7 HTML5 / PWA
 ====================
+
+NOVEDADES v0.7
+- Corregido: los WebSockets de la moneda anterior ya no se reconectan al cambiar de moneda o intervalo.
+- Corregido: respuestas REST tardias de otra moneda ya no sobrescriben los datos.
+- Notificaciones via service worker (compatibles con Chrome Android).
+- Perfil del libro: profundidad 1000 y bandas que se adaptan a la cobertura real del libro.
+- Los eventos de liquidacion observados se guardan 24 h por moneda en localStorage.
 
 CONTENIDO
 - index.html: aplicación completa (HTML, CSS y JavaScript en un solo archivo).
