@@ -1,2 +1,2 @@
-# mapa-liquidaciones-local
+# mapa-liquidaciones-global
 Mapa de liquidación 
