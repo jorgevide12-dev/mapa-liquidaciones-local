@@ -29,7 +29,13 @@
 .vnote{display:block;font-size:9.5px;color:var(--muted);line-height:1.4}
 
 .vmon{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.vm{flex:1;min-width:58px;background:#111d2e;border-radius:8px;padding:7px 6px;text-align:center;font-size:10px;color:var(--muted)}.vm.off{opacity:.35}.vm i{display:block;font-style:normal;margin-bottom:5px;font-weight:700}.vm .vpill{display:block;min-width:0;padding:5px 2px;font-size:10px;letter-spacing:0}.vm .vpill:empty,.vm .vpill.undefined{background:#17243a;color:var(--muted);border:1px solid var(--line)}.vlog{margin-top:8px}.vchk{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin-top:12px}.vchk input{accent-color:var(--gold);width:16px;height:16px}
-.vcap{font-size:9px;color:var(--muted);letter-spacing:.8px;font-weight:750;margin:14px 0 -4px}</style>
+.vcap{font-size:9px;color:var(--muted);letter-spacing:.8px;font-weight:750;margin:14px 0 -4px}
+.sq0,.sq1,.sq2{min-width:104px;text-align:center;padding:8px 10px;border-radius:9px;font-weight:850;font-size:11px;letter-spacing:.4px;white-space:nowrap}.sq0{background:#17243a;color:var(--muted);border:1px solid var(--line)}.sq1{background:#f3ad4322;color:var(--gold);border:1px solid #f3ad4366}.sq2{background:#20c99722;color:var(--green);border:1px solid #20c99766;animation:sqp 1.2s infinite}@keyframes sqp{50%{box-shadow:0 0 14px #20c99777}}
+.sqscore{display:flex;align-items:baseline;gap:6px;margin:12px 0 8px}.sqscore b{font-size:34px;letter-spacing:-1px}.sqscore span{color:var(--muted);font-size:12px}.sqbars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.sqbars label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.sqbars label b{color:var(--text)}.sqb{height:8px;background:#1b293d;border-radius:8px;overflow:hidden;margin-top:6px}.sqb i{display:block;height:100%;border-radius:8px;transition:width .4s}.sqcap{font-size:9px;color:var(--muted);letter-spacing:.8px;font-weight:750;margin:8px 0 -2px}
+
+.sq2d{min-width:104px;text-align:center;padding:8px 10px;border-radius:9px;font-weight:850;font-size:11px;letter-spacing:.4px;white-space:nowrap;background:#ef647822;color:var(--red);border:1px solid #ef647866;animation:sqpd 1.2s infinite}@keyframes sqpd{50%{box-shadow:0 0 14px #ef647777}}
+.sqside{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.sqside:first-child{border-top:0;margin-top:6px;padding-top:0}.sqhead{display:flex;align-items:center;gap:10px;margin-bottom:8px}.sqhead>div{flex:1;min-width:0}.sqhead b{font-size:13px;display:block}.sqhead small{font-size:10px;color:var(--muted)}.sqN{font-size:28px;font-weight:850;letter-spacing:-1px}.sqN i{font-size:11px;color:var(--muted);font-style:normal;letter-spacing:0}
+</style>
 </head>
 <body>
 <div class="app">
@@ -41,6 +47,9 @@
 <div class="heatbox"><canvas id="chart"></canvas></div><div class="subbox"><canvas id="oiC"></canvas></div><div class="subbox"><canvas id="cvdC"></canvas></div>
 <div class="legend"><span>Densidad estimada: baja<span class="grad"></span>alta</span><span><i style="background:#2fbe64"></i>Perfil: SHORT (arriba) · <i style="background:#f0463e"></i>LONG (abajo)</span><span><i style="background:#ef6478"></i>Evento LONG real</span><span><i style="background:#20c997"></i>Evento SHORT real</span></div>
 <div class="verdict" id="verdict"></div><div class="vcap">VEREDICTO EN CADA TEMPORALIDAD · independiente del gráfico</div><div class="vmon" id="vStatus"></div></section>
+<section class="panel" id="sqpanel"><div class="panel-title"><div><h2>Squeeze de shorts y de longs</h2><div class="sub">Combustible (posiciones apiladas) + chispa (ruptura con volumen) · temporalidad seleccionada</div></div></div>
+<div id="sqBody"><p class="vtext">Calculando…</p></div>
+<small class="vnote" style="margin-top:12px">En futuros de cripto no existe short float ni days to cover: se usan equivalentes (funding, ratio long/short, OI vs su promedio, OI de ese lado estimado / volumen diario, ruptura del rango de 20 velas, volumen relativo y liquidaciones de ese lado recibidas en vivo). Alerta automática con sonido y vibración al subir de etapa, en cualquiera de los dos sentidos. Los umbrales se ajustan en <code>const SQ</code>. No garantiza resultado: usa stop.</small></section>
 <section class="grid">
  <div class="metric"><label>PRECIO ACTUAL</label><strong id="price">Cargando…</strong><small id="change">--</small></div>
  <div class="metric"><label>INTERÉS ABIERTO</label><strong id="oi">--</strong><small id="oiUnits">Valor nocional aproximado</small></div>
@@ -228,9 +237,9 @@ let vLast={},vPend={},vBusy={},vTimer=0,vGen=0,actx=null,wl=null;
 function unlockAudio(){try{if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch{}}
 function tone(f,t0,d,vol){const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;o.connect(g);g.connect(actx.destination);const T=actx.currentTime+t0;g.gain.setValueAtTime(0,T);g.gain.linearRampToValueAtTime(vol,T+.02);g.gain.exponentialRampToValueAtTime(.0001,T+d);o.start(T);o.stop(T+d+.05)}
 function beep(v){unlockAudio();if(!actx)return;const seq=v==='LONG'?[523,659,784]:v==='SHORT'?[784,659,523]:[620,620];for(let r=0;r<3;r++)seq.forEach((f,i)=>tone(f,r*.95+i*.24,.22,.8))}
-const VIB={LONG:[200,100,200,100,200],SHORT:[500,150,500,150,500,150,500],ESPERAR:[300,120,300]};
+const VIB={LONG:[200,100,200,100,200],SHORT:[500,150,500,150,500,150,500],ESPERAR:[300,120,300],SQ1:[250,150,250],SQ2:[150,80,150,80,150,80,700]};
 function vib(v){try{if(navigator.vibrate)navigator.vibrate(VIB[v]||VIB.ESPERAR)}catch{}}
-async function notifyVerdict(msg,key,v){if(!('Notification'in window)||Notification.permission!=='granted')return;try{const o={body:msg,icon:'mll-192.png',badge:'mll-192.png',tag:key,renotify:true,vibrate:VIB[v]||VIB.ESPERAR,requireInteraction:false};const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg&&reg.showNotification){await reg.showNotification('Veredicto MLL',o);return}new Notification('Veredicto MLL',o)}catch{}}
+async function notifyVerdict(msg,key,v,title){if(!('Notification'in window)||Notification.permission!=='granted')return;try{const o={body:msg,icon:'mll-192.png',badge:'mll-192.png',tag:key,renotify:true,vibrate:VIB[v]||VIB.ESPERAR,requireInteraction:false};const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg&&reg.showNotification){await reg.showNotification((title||'Veredicto MLL'),o);return}new Notification((title||'Veredicto MLL'),o)}catch{}}
 async function wakeSet(on){try{if(on&&'wakeLock'in navigator){if(wl)return;wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}else if(wl){await wl.release();wl=null}}catch{}}
 function vFire(coin,iv,from,to,conf){const msg=`${coin} ${TFL[iv]}: ${NM[from]} → ${NM[to]} (confianza ${conf})`;toast(msg,9000);vib(to);beep(to);notifyVerdict(msg,'v-'+coin+'-'+iv,to)}
 async function vMonitor(){const coin=state.coin,iv=state.interval,key=coin+'-'+iv,gen=vGen;if(vBusy[key])return;vBusy[key]=true;
@@ -239,7 +248,7 @@ const C=kl.map(x=>({t:x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5],q:+x[7],tb:+x
 for(let i=0;i<N;i++){const c=C[i];cum+=(2*c.tb-c.v)*c.c;cvdL[i]=cum;let v=lv.get(c.t);if(v===undefined)v=prev;if(i===N-1&&state.oi&&state.price&&coin===state.coin)v=state.oi*state.price;oiL[i]=v;if(v!=null)prev=v}
 const r=calcVerdict(C,cvdL,oiL,iv);
 if(gen!==vGen||coin!==state.coin||iv!==state.interval||!r)return;
-state.vFresh={coin,iv,r,t:Date.now()};renderVerdictR(r,iv);
+state.vFresh={coin,iv,r,t:Date.now()};renderVerdictR(r,iv);sqRun(coin,iv,C,oh,gen);
 const last=vLast[key];if(last===undefined){vLast[key]=r.s;return}
 if(r.s===last){delete vPend[key];return}
 const p=vPend[key];if(p&&p.s===r.s)p.n++;else vPend[key]={s:r.s,n:1};
@@ -258,7 +267,51 @@ return[iv,calcVerdict(C,cvdL,oiL,iv)]}catch{return[iv,null]}}));
 if(gen!==vAllGen||coin!==state.coin)return;
 for(const[iv,r]of res)if(r)vAll[iv]=r;renderVAll()}finally{vAllBusy=false}}
 function vAllStart(){clearInterval(vAllTimer);vAllGen++;vAll={};renderVAll();vAllRun();vAllTimer=setInterval(vAllRun,15000)}
-function vStart(){clearInterval(vTimer);vGen++;vLast={};vPend={};state.vFresh=null;vMonitor();vTimer=setInterval(vMonitor,VPOLL)}
+
+/* ===== Squeeze de shorts (sube) y de longs (baja), puntaje 0-100 ===== */
+const SQ={fundFull:.0003,fundBase:.0001,fundFullL:.0005,lsSpan:.3,oiSpan:.15,dtcLo:.1,dtcHi:.4,liqMult:8,fuelMin:30,sparkMin:30,brkN:20};
+const SQR={'SIN SEÑAL':0,'CARGADO':1,'EN MARCHA':2};
+const clampq=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),avgq=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+let sqLS=null,sqLast={},sqPend={},sqBusy=false;
+/*SQCALC*/
+function sqStage(fuel,spark){return fuel>=SQ.fuelMin&&spark>=SQ.sparkMin?'EN MARCHA':fuel>=SQ.fuelMin?'CARGADO':'SIN SEÑAL'}
+function sqCalc(p){const{C,oh,ratio,f,price,oi,iv,liqS,liqL,minimum,now}=p,N=C.length,b=N-1,m=IV[iv];if(N<SQ.brkN+3)return null;
+const oiVals=oh.map(x=>+x.sumOpenInterestValue).filter(x=>x>0),oiNow=oi>0?oi:(oiVals.length?oiVals[oiVals.length-1]:0),oiAvg=avgq(oiVals),oiRel=oiAvg>0?oiNow/oiAvg-1:0;
+const r=ratio>0?ratio:1,dayQ=avgq(C.slice(0,b).map(c=>c.q))*(864e5/m),px=price||C[b].c,sOI=clampq(oiRel/SQ.oiSpan);
+const win=C.slice(b-SQ.brkN,b),prevHigh=Math.max(...win.map(c=>c.h)),prevLow=Math.min(...win.map(c=>c.l));
+const el=clampq((now-C[b].t)/m,.25,1),proj=C[b].q/el,base=avgq(C.slice(Math.max(0,b-21),b-1).map(c=>c.q)),rvol=base>0?Math.max(C[b-1].q,proj)/base:0,sRV=clampq((rvol-1)/2);
+const mk=(sFund,sLS,dtc,brk,liq)=>{const sDTC=clampq((dtc-SQ.dtcLo)/(SQ.dtcHi-SQ.dtcLo)),sCat=clampq(liq/(SQ.liqMult*minimum)),fuel=10*(sFund+sLS+sOI)+20*sDTC,spark=(brk?15:0)+20*sRV+15*sCat;return{fuel,spark,total:fuel+spark,stage:sqStage(fuel,spark),sFund,sLS,sOI,sDTC,sRV,sCat,dtc,brk,liq}};
+const S=mk(f!=null&&f<0?clampq(-f/SQ.fundFull):0,ratio>0?clampq((1-ratio)/SQ.lsSpan):0,dayQ>0?(oiNow/(1+r))/dayQ:0,px>prevHigh,liqS);
+const L=mk(f!=null&&f>SQ.fundBase?clampq((f-SQ.fundBase)/(SQ.fundFullL-SQ.fundBase)):0,ratio>0?clampq((ratio-1)/SQ.lsSpan):0,dayQ>0?(oiNow*r/(1+r))/dayQ:0,px<prevLow,liqL);
+return{S,L,f,ratio,oiRel,rvol}}
+/*ENDSQCALC*/
+async function sqRun(coin,iv,C,oh,gen){if(sqBusy)return;sqBusy=true;
+try{const key=coin+'-'+iv;
+if(!sqLS||sqLS.key!==key||Date.now()-sqLS.t>60000){try{const d=await get(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${coin}USDT&period=${iv}&limit=1`);if(d&&d.length)sqLS={key,t:Date.now(),ratio:+d[d.length-1].longShortRatio}}catch{}}
+if(gen!==vGen||coin!==state.coin||iv!==state.interval)return;
+const now=Date.now(),sumL=sd=>state.events.filter(e=>e.side===sd&&now-e.time<9e5).reduce((a,e)=>a+e.notional,0);
+const res=sqCalc({C,oh,ratio:sqLS&&sqLS.key===key?sqLS.ratio:null,f:state.funding===undefined?null:state.funding,price:state.price,oi:state.oi&&state.price?state.oi*state.price:0,iv,liqS:sumL('SHORT'),liqL:sumL('LONG'),minimum:state.minimum,now});
+if(!res)return;state.sq={coin,iv,t:now,...res};renderSq();
+for(const[sd,o]of[['S',res.S],['L',res.L]]){const k=key+sd,st=o.stage,last=sqLast[k];
+if(last===undefined){sqLast[k]=st;continue}
+if(st===last){delete sqPend[k];continue}
+const pp=sqPend[k];if(pp&&pp.s===st)pp.n++;else sqPend[k]={s:st,n:1};
+if(sqPend[k].n>=VCONF){if(SQR[st]>SQR[last])sqFire(coin,iv,sd,st,o);sqLast[k]=st;delete sqPend[k]}}
+}catch{}finally{sqBusy=false}}
+function beepSq(st,sd){unlockAudio();if(!actx)return;const up=sd!=='L';if(st==='EN MARCHA'){const q=up?[660,880,1100]:[1100,880,660];for(let r=0;r<4;r++)q.forEach((f,i)=>tone(f,r*.6+i*.14,.14,.85))}else{const q=up?[740,880]:[880,740];for(let r=0;r<2;r++)q.forEach((f,i)=>tone(f,r*.7+i*.2,.16,.8))}}
+function sqFire(coin,iv,sd,st,o){const nm=sd==='L'?'LONGS ↓':'SHORTS ↑',msg=`${coin} ${TFL[iv]}: SQUEEZE DE ${nm} ${st} · ${Math.round(o.total)}/100 (combustible ${Math.round(o.fuel)}, chispa ${Math.round(o.spark)})`,k=st==='EN MARCHA'?'SQ2':'SQ1';toast(msg,10000);vib(k);beepSq(st,sd);notifyVerdict(msg,'sq-'+coin+'-'+iv+sd,k,'Squeeze MLL')}
+function renderSq(){const el=$('sqBody');if(!el)return;const s=state.sq,ok=s&&s.coin===state.coin&&s.iv===state.interval;
+if(!ok){const h='<p class="vtext">Calculando…</p>';if(el._h!==h){el._h=h;el.innerHTML=h}return}
+const chip=(l,v,sc)=>`<span>${l}<b class="${sc>=.5?'up':'flat'}">${v}</b></span>`,fFmt=s.f==null?'--':(s.f*100).toFixed(4)+'%',lsFmt=s.ratio>0?s.ratio.toFixed(2):'--';
+const side=(o,L)=>{const fu=o.fuel>=SQ.fuelMin,sp=o.spark>=SQ.sparkMin,pc=o.stage==='EN MARCHA'?(L?'sq2d':'sq2'):o.stage==='CARGADO'?'sq1':'sq0',gf=L?'linear-gradient(90deg,#8a5a14,var(--gold))':'linear-gradient(90deg,#8a5a14,var(--gold))',gs=L?'linear-gradient(90deg,#8b2c3a,var(--red))':'linear-gradient(90deg,#126b5b,var(--green))';
+const txt=L?(fu&&sp?'Lado largo cargado y el precio rompe a la baja con volumen: posible long squeeze en curso (los longs son liquidados o venden para cerrar).':fu?'Hay combustible (longs apilados) pero aún no hay chispa. Vigila una ruptura a la baja con volumen o liquidaciones de longs.':sp?'Hay ruptura a la baja con volumen, pero sin longs apilados: parece una caída normal, no un squeeze.':'Sin combustible ni chispa suficientes para un squeeze de longs.')
+:(fu&&sp?'Lado corto cargado y el precio rompe al alza con volumen: posible short squeeze en curso (los shorts recompran para cerrar).':fu?'Hay combustible (shorts apilados) pero aún no hay chispa. Vigila una ruptura al alza con volumen o liquidaciones de shorts.':sp?'Hay ruptura al alza con volumen, pero sin shorts apilados: parece una subida normal, no un squeeze.':'Sin combustible ni chispa suficientes para un squeeze de shorts.');
+return`<div class="sqside"><div class="sqhead"><div><b>${L?'SQUEEZE DE LONGS ↓':'SQUEEZE DE SHORTS ↑'}</b><small>${L?'baja por cierre forzado de longs':'sube por recompra de shorts'}</small></div><span class="sqN">${Math.round(o.total)}<i>/100</i></span><span class="${pc}">${o.stage}</span></div>`+
+`<div class="sqbars"><div><label>Combustible <span><b>${Math.round(o.fuel)}</b>/50</span></label><div class="sqb"><i style="width:${o.fuel*2}%;background:${gf}"></i></div></div><div><label>Chispa <span><b>${Math.round(o.spark)}</b>/50</span></label><div class="sqb"><i style="width:${o.spark*2}%;background:${gs}"></i></div></div></div>`+
+`<div class="vstats">${chip('Funding',fFmt,o.sFund)}${chip('L/S cuentas',lsFmt,o.sLS)}${chip('OI vs prom.',pctTxt(s.oiRel),o.sOI)}${chip(L?'Días p/cubrir (longs)':'Días p/cubrir',o.dtc.toFixed(2),o.sDTC)}</div>`+
+`<div class="vstats" style="margin-top:6px">${chip(L?'Ruptura abajo':'Ruptura arriba',o.brk?'Sí':'No',o.brk?1:0)}${chip('Vol. relativo',s.rvol.toFixed(1)+'×',o.sRV)}${chip(L?'Liq. longs 15m':'Liq. shorts 15m','$'+money(o.liq,0),o.sCat)}</div><p class="vtext" style="margin-top:10px">${txt}</p></div>`};
+const h=side(s.S,false)+side(s.L,true);if(el._h!==h){el._h=h;el.innerHTML=h}}
+function vStart(){clearInterval(vTimer);vGen++;vLast={};vPend={};state.vFresh=null;sqLast={};sqPend={};state.sq=null;renderSq();vMonitor();vTimer=setInterval(vMonitor,VPOLL)}
 function bindV(){const first=()=>{unlockAudio();if('Notification'in window&&Notification.permission==='default'){try{Notification.requestPermission()}catch{}}wakeSet(true)};
 document.addEventListener('pointerdown',first,{passive:true,once:true});document.addEventListener('pointerdown',unlockAudio,{passive:true});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){wakeSet(true);vMonitor();vAllRun()}});
