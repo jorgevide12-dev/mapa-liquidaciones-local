@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "MLL - Mapa de Liquidaciones Local",
+  "short_name": "MLL",
+  "description": "Terminal móvil de mercado, liquidez visible y liquidaciones observadas.",
+  "lang": "es-MX",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080d18",
+  "theme_color": "#080d18",
+  "icons": [
+    {"src":"mll-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"mll-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

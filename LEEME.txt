@@ -1,0 +1,38 @@
+MLL v0.6 HTML5 / PWA
+====================
+
+CONTENIDO
+- index.html: aplicación completa (HTML, CSS y JavaScript en un solo archivo).
+- manifest.webmanifest: configuración instalable PWA.
+- sw.js: caché de la interfaz para carga básica offline.
+- mll-192.png, mll-512.png y mll.svg: iconos de la aplicación (en la raíz para facilitar la carga en GitHub desde Android).
+
+FUNCIONES
+- Selector de 20 contratos USDⓈ-M Futures.
+- Velas y volumen en canvas, intervalos 5m, 15m, 1h y 4h.
+- Precio y variación 24h por WebSocket.
+- Open Interest, funding, mark price y libro de órdenes por REST.
+- Stream público forceOrder por contrato; eventos observados almacenados localmente.
+- Perfil del libro visible agrupado por bandas de 0.1%.
+- Alertas locales de proximidad con umbral de distancia y volumen mínimo.
+- Historial de alertas en localStorage.
+- PWA con manifest y service worker.
+
+IMPORTANTE
+1. Esta modalidad NO usa backend propio ni Docker ni PC 24/7.
+2. El HTML no puede garantizar la recopilación de eventos cuando Android suspende/cierra Chrome.
+3. Las notificaciones del navegador son locales y dependen de que la página siga activa. Push en segundo plano requiere backend push.
+4. La PWA debe servirse por HTTPS o localhost para que service worker e instalación estén disponibles. Abrir index.html directamente como archivo puede mostrar la interfaz, pero no habilita instalación PWA ni service worker.
+5. Binance limita la información pública. forceOrder es un stream de eventos observados/snapshot, no un mapa completo de todas las liquidaciones ni posiciones individuales.
+6. El perfil de liquidez representa órdenes límite visibles del libro; pueden cancelarse y no son niveles de liquidación.
+7. Los endpoints públicos y WebSocket dependen de disponibilidad de Binance, conectividad, CORS y políticas regionales. No se garantiza que todos los contratos respondan desde todas las redes.
+
+PUBLICACIÓN PARA ANDROID
+- Sube el contenido de esta carpeta a un hosting estático HTTPS (por ejemplo GitHub Pages, Cloudflare Pages o Netlify).
+- Abre la URL HTTPS en Chrome Android.
+- Menú ⋮ > Instalar aplicación / Añadir a pantalla de inicio.
+- Para actualizar, reemplaza los archivos en el hosting; el service worker renovará la caché al recargar.
+
+PRUEBA LOCAL (opcional, con Python instalado)
+  python -m http.server 8080
+Luego abre http://localhost:8080 en la computadora. Para instalar en Android necesitarás publicar por HTTPS.
