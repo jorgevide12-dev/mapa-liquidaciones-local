@@ -34,6 +34,11 @@
 .vnote{display:block;font-size:9.5px;color:var(--muted);line-height:1.4}
 
 .vmon{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.vm{flex:1;min-width:58px;background:#111d2e;border-radius:8px;padding:7px 6px;text-align:center;font-size:10px;color:var(--muted)}.vm.off{opacity:.35}.vm i{display:block;font-style:normal;margin-bottom:5px;font-weight:700}.vm .vpill{display:block;min-width:0;padding:5px 2px;font-size:10px;letter-spacing:0}.vm .vpill:empty,.vm .vpill.undefined{background:#17243a;color:var(--muted);border:1px solid var(--line)}.vlog{margin-top:8px}.vchk{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin-top:12px}.vchk input{accent-color:var(--gold);width:16px;height:16px}
+.vtag{display:block;font-style:normal;font-size:8.5px;font-weight:800;margin-top:4px;letter-spacing:.2px;white-space:nowrap}
+.vtag.up{color:var(--green)}.vtag.down{color:var(--red)}.vtag.warn{color:var(--gold)}.vtag.flat{color:var(--muted)}
+.vplan{margin-top:8px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:#0e1726}
+.vplan b{font-size:12px}.vplan p{margin:4px 0 0;font-size:11px;line-height:1.45;color:var(--text)}
+.vplan.up{border-color:#20c99788}.vplan.up b{color:var(--green)}.vplan.down{border-color:#ef647888}.vplan.down b{color:var(--red)}.vplan.warn{border-color:#f3ad4388}.vplan.warn b{color:var(--gold)}
 .vcap{font-size:9px;color:var(--muted);letter-spacing:.8px;font-weight:750;margin:14px 0 -4px}
 .sq0,.sq1,.sq2{min-width:104px;text-align:center;padding:8px 10px;border-radius:9px;font-weight:850;font-size:11px;letter-spacing:.4px;white-space:nowrap}.sq0{background:#17243a;color:var(--muted);border:1px solid var(--line)}.sq1{background:#f3ad4322;color:var(--gold);border:1px solid #f3ad4366}.sq2{background:#20c99722;color:var(--green);border:1px solid #20c99766;animation:sqp 1.2s infinite}@keyframes sqp{50%{box-shadow:0 0 14px #20c99777}}
 .sqscore{display:flex;align-items:baseline;gap:6px;margin:12px 0 8px}.sqscore b{font-size:34px;letter-spacing:-1px}.sqscore span{color:var(--muted);font-size:12px}.sqbars{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.sqbars label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.sqbars label b{color:var(--text)}.sqb{height:8px;background:#1b293d;border-radius:8px;overflow:hidden;margin-top:6px}.sqb i{display:block;height:100%;border-radius:8px;transition:width .4s}.sqcap{font-size:9px;color:var(--muted);letter-spacing:.8px;font-weight:750;margin:8px 0 -2px}
@@ -51,7 +56,7 @@
 <div class="hctl"><div class="chips" id="exch"><button data-x="all">Todos</button><button data-x="binance">Binance</button><button data-x="bybit">Bybit</button><button data-x="okx">OKX</button></div><span class="sub" id="exState" style="font-size:9px"></span><div class="chips" id="presets"><button data-p="all">Todo</button><button data-p="scalp">Scalping</button><button data-p="swing">Swing</button></div><label class="intens">Intensidad<input id="intensity" type="range" min="0" max="100" value="37"><b id="intensityLabel">37%</b></label><button id="resetView" class="btn" style="padding:7px 10px">Ahora</button></div><div id="exShare" class="exshare" style="display:none"></div>
 <div class="heatbox"><canvas id="chart"></canvas></div><div class="subbox"><canvas id="oiC"></canvas></div><div class="subbox"><canvas id="cvdC"></canvas></div>
 <div class="legend"><span>Densidad estimada: baja<span class="grad"></span>alta</span><span><i style="background:#2fbe64"></i>Perfil: SHORT (arriba) · <i style="background:#f0463e"></i>LONG (abajo)</span><span><i style="background:#ef6478"></i>Evento LONG real</span><span><i style="background:#20c997"></i>Evento SHORT real</span></div>
-<div class="verdict" id="verdict"></div><div class="vcap">VEREDICTO EN CADA TEMPORALIDAD · independiente del gráfico</div><div class="vmon" id="vStatus"></div></section>
+<div class="verdict" id="verdict"></div><div class="vcap">VEREDICTO EN CADA TEMPORALIDAD · independiente del gráfico</div><div class="vmon" id="vStatus"></div><div id="vPlan"></div></section>
 <section class="panel" id="sqpanel"><div class="panel-title"><div><h2>Squeeze de shorts y de longs</h2><div class="sub">Combustible (posiciones apiladas) + chispa (ruptura con volumen) · temporalidad seleccionada</div></div></div>
 <div id="sqBody"><p class="vtext">Calculando…</p></div>
 <small class="vnote" style="margin-top:12px">En futuros de cripto no existe short float ni days to cover: se usan equivalentes (funding, ratio long/short, OI vs su promedio, OI de ese lado estimado / volumen diario, ruptura del rango de 20 velas, volumen relativo y liquidaciones de ese lado recibidas en vivo). Alerta automática con sonido y vibración al subir de etapa, en cualquiera de los dos sentidos. Los umbrales se ajustan en <code>const SQ</code>. No garantiza resultado: usa stop.</small></section>
@@ -172,27 +177,34 @@ if(P===1){
 }
 if(!hasO&&conf==='Alta')conf='Media';
 /* ---- Ventana corta (timing de entrada para scalping) ---- */
-let sh=null;
+let sh;
 {const ks=Math.min(SWIN[iv]||3,N-1),a3=b-ks,pt3=pt*.5;
 const pc3=C[b].c/C[a3].c-1;let vol3=0;for(let i=a3+1;i<=b;i++)vol3+=C[i].q;
 const cr3=vol3>0?(cvdL[b]-cvdL[a3])/vol3:0,o3=(oiL[a3]!=null&&oiL[b]!=null)?oiL[b]/oiL[a3]-1:null;
 const P3=pc3>pt3?1:pc3<-pt3?-1:0,V3=cr3>.02?1:cr3<-.02?-1:0;
 let hi=-Infinity,lo=Infinity;for(let i=a+1;i<=b;i++){if(C[i].h>hi)hi=C[i].h;if(C[i].l<lo)lo=C[i].l}
-const dir=s==='LONG'?1:s==='SHORT'?-1:0;let st='NEUTRO',tx='Sin sesgo claro en la ventana principal: no hay entrada que validar.';
-const retr=dir===1?C[b].c/hi-1:dir===-1?C[b].c/lo-1:0;
-if(dir!==0){const sc=(P3+V3)*dir,bad=(P3===-dir)||(V3===-dir),ext=pc*dir>2.5*pt;
- if(bad&&sc<=0){st='CORRECCIÓN';tx=(dir===1?'El flujo de las últimas '+ks+' velas va en contra (cae/vende) mientras el sesgo es LONG.':'El flujo de las últimas '+ks+' velas va en contra (sube/compra) mientras el sesgo es SHORT.')+' No entres ahora: espera que frene en soporte/resistencia o que el flujo corto vuelva a favor.'}
- else if(sc>=1&&!bad){if(ext){st='EXTENDIDO';tx='El flujo corto sigue a favor, pero el precio ya corrió mucho en la ventana principal. Entrar aquí es perseguir: mejor esperar un retroceso.'}else{st='ENTRAR';tx='El flujo corto confirma el sesgo '+s+'. Momento válido para buscar entrada con stop corto.'}}
- else{st='NEUTRO';tx='El flujo corto está sin dirección clara. Espera una vela más que confirme.'}}
-sh={ks,pc3,cr3,o3,P3,V3,st,tx,retr,dir}}
-return{s,conf,t,k,pc,o,cr,P,O,V,hasO,sh}}
+sh={ks,pc3,cr3,o3,P3,V3,rh:C[b].c/hi-1,rl:C[b].c/lo-1,pt}}
+const res={s,conf,t,k,pc,o,cr,P,O,V,hasO,sh};
+const dir0=s==='LONG'?1:s==='SHORT'?-1:0;
+Object.assign(sh,tmg(res,dir0),{dir:dir0});
+if(sh.st==='CORRECCIÓN'&&dir0!==0){res.conf=conf==='Alta'?'Media':'Baja'}
+return res}
+/* Timing de entrada respecto a una dirección (dir=1 long, -1 short) con los datos de la ventana corta */
+function tmg(r,dir){const sh=r.sh,pt=sh.pt;
+if(!dir)return{st:'NEUTRO',q:'',retr:0,tx:'Sin sesgo claro en la ventana principal: no hay entrada que validar.'};
+const retr=dir===1?sh.rh:sh.rl,sc=(sh.P3+sh.V3)*dir,bad=(sh.P3===-dir)||(sh.V3===-dir);
+const ext=r.pc*dir>2.5*pt&&Math.abs(retr)<pt*.5,nm=dir===1?'LONG':'SHORT';
+if(bad&&sc<=0)return{st:'CORRECCIÓN',q:'',retr,tx:'El flujo de las últimas '+sh.ks+' velas va en contra ('+(dir===1?'cae/vende':'sube/compra')+') mientras el sesgo es '+nm+'. No entres ahora: espera que frene en soporte/resistencia o que el flujo vuelva a favor.'};
+if(sc>=1&&!bad){if(ext)return{st:'EXTENDIDO',q:'',retr,tx:'El flujo corto sigue a favor, pero el precio ya corrió mucho y está pegado al extremo. Entrar aquí es perseguir: mejor esperar un retroceso.'};
+ const opt=Math.abs(retr)>=pt*.5;return{st:'ENTRAR',q:opt?'óptima':'normal',retr,tx:opt?'Hubo retroceso y el flujo corto ya reanuda a favor del sesgo '+nm+': es el mejor punto de entrada, con stop corto detrás del retroceso.':'El flujo corto confirma el sesgo '+nm+'. Momento válido para buscar entrada con stop corto.'}}
+return{st:'NEUTRO',q:'',retr,tx:'El flujo corto está sin dirección clara. Espera una vela más que confirme.'}}
 function renderVerdict(C,cvdL,oiL){const iv=state.interval,f=state.vFresh;const r=(f&&f.coin===state.coin&&f.iv===iv&&Date.now()-f.t<35000)?f.r:calcVerdict(C,cvdL,oiL,iv);renderVerdictR(r,iv)}
 function renderVerdictR(r,iv){
 const el=$('verdict');if(!el||!r)return;const{s,conf,t,k,pc,o,cr,P,O,V,hasO,sh}=r;
 const cls=v=>v>0?'up':v<0?'down':'flat';
 const html=`<div class="vhead"><span class="vpill ${s}">${s}</span><div><b>Veredicto OI + CVD · ${iv==='1d'?'1D':iv}</b><small>Ventana: últimas ${k} velas (${fmtSpan(k*(IV[iv]||0))}) · confianza ${conf}</small></div></div>`+
 `<div class="vstats"><span>Precio<b class="${cls(P)}">${pctTxt(pc)}</b></span><span>Open Interest<b class="${cls(O)}">${hasO?pctTxt(o):'--'}</b></span><span>CVD / volumen<b class="${cls(V)}">${pctTxt(cr)}</b></span></div>`+
-(sh?`<div class="vshort ${sh.st}"><div class="vshead"><b>Corto plazo · últimas ${sh.ks} velas (${fmtSpan(sh.ks*(IV[iv]||0))})</b><span class="vspill ${sh.st}">${sh.st}</span></div><div class="vstats"><span>Precio<b class="${cls(sh.P3)}">${pctTxt(sh.pc3)}</b></span><span>OI<b class="${cls(sh.o3==null?0:sh.o3>0?1:-1)}">${sh.o3==null?'--':pctTxt(sh.o3)}</b></span><span>CVD / vol<b class="${cls(sh.V3)}">${pctTxt(sh.cr3)}</b></span>${sh.dir?`<span>Desde ${sh.dir>0?'máx':'mín'}<b class="${sh.retr<0===(sh.dir>0)?'down':'flat'}">${pctTxt(sh.retr)}</b></span>`:''}</div><p class="vtext">${sh.tx}</p></div>`:'')+
+(sh?`<div class="vshort ${sh.st}"><div class="vshead"><b>Corto plazo · últimas ${sh.ks} velas (${fmtSpan(sh.ks*(IV[iv]||0))})</b><span class="vspill ${sh.st}">${sh.st}${sh.q=='óptima'?' ★':''}</span></div><div class="vstats"><span>Precio<b class="${cls(sh.P3)}">${pctTxt(sh.pc3)}</b></span><span>OI<b class="${cls(sh.o3==null?0:sh.o3>0?1:-1)}">${sh.o3==null?'--':pctTxt(sh.o3)}</b></span><span>CVD / vol<b class="${cls(sh.V3)}">${pctTxt(sh.cr3)}</b></span>${sh.dir?`<span>Desde ${sh.dir>0?'máx':'mín'}<b class="${sh.retr<0?'down':'flat'}">${pctTxt(sh.retr)}</b></span>`:''}</div><p class="vtext">${sh.tx}</p></div>`:'')+
 `<p class="vtext">${t}${hasO?'':' (OI no disponible: lectura solo con precio y CVD.)'}</p><small class="vnote">Lectura del flujo reciente de Binance Futures; cambia al elegir otra temporalidad. Alerta automática (sonido y vibración) cuando el veredicto cambia. No garantiza resultado: confirma con tu estrategia y usa stop.</small>`;
 if(el._h!==html){el._h=html;el.innerHTML=html}}
 function drawSubs(start,end,count,colW,left,hr){
@@ -272,7 +284,6 @@ function vib(v){try{if(navigator.vibrate)navigator.vibrate(VIB[v]||VIB.ESPERAR)}
 async function notifyVerdict(msg,key,v,title){if(!('Notification'in window)||Notification.permission!=='granted')return;try{const o={body:msg,icon:'mll-192.png',badge:'mll-192.png',tag:key,renotify:true,vibrate:VIB[v]||VIB.ESPERAR,requireInteraction:false};const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg&&reg.showNotification){await reg.showNotification((title||'Veredicto MLL'),o);return}new Notification((title||'Veredicto MLL'),o)}catch{}}
 async function wakeSet(on){try{if(on&&'wakeLock'in navigator){if(wl)return;wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}else if(wl){await wl.release();wl=null}}catch{}}
 function vFire(coin,iv,from,to,conf){const msg=`${coin} ${TFL[iv]}: ${NM[from]} → ${NM[to]} (confianza ${conf})`;toast(msg,9000);vib(to);beep(to);notifyVerdict(msg,'v-'+coin+'-'+iv,to)}
-let vSh={};
 async function vMonitor(){const coin=state.coin,iv=state.interval,key=coin+'-'+iv,gen=vGen;if(vBusy[key])return;vBusy[key]=true;
 try{const m=IV[iv],base='https://fapi.binance.com',[kl,oh]=await Promise.all([get(`${base}/fapi/v1/klines?symbol=${coin}USDT&interval=${iv}&limit=60`),get(`${base}/futures/data/openInterestHist?symbol=${coin}USDT&period=${iv}&limit=60`)]);
 const C=kl.map(x=>({t:x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5],q:+x[7],tb:+x[9]})),lv=new Map(oh.map(x=>[Math.floor(+x.timestamp/m)*m,+x.sumOpenInterestValue])),N=C.length,cvdL=new Array(N),oiL=new Array(N).fill(null);let cum=0,prev=null;
@@ -280,7 +291,6 @@ for(let i=0;i<N;i++){const c=C[i];cum+=(2*c.tb-c.v)*c.c;cvdL[i]=cum;let v=lv.get
 const r=calcVerdict(C,cvdL,oiL,iv);
 if(gen!==vGen||coin!==state.coin||iv!==state.interval||!r)return;
 state.vFresh={coin,iv,r,t:Date.now()};renderVerdictR(r,iv);sqRun(coin,iv,C,oh,gen);
-if(r.sh){const ps=vSh[key];if(ps!==undefined&&ps!==r.sh.st&&r.sh.st==='ENTRAR'){const m2=`${coin} ${TFL[iv]}: ${r.s} + flujo corto a favor → ENTRAR (momento de scalping)`;toast(m2,9000);vib(r.s);beep(r.s);notifyVerdict(m2,'sh-'+coin+'-'+iv,r.s,'Entrada MLL')}vSh[key]=r.sh.st}
 const last=vLast[key];if(last===undefined){vLast[key]=r.s;return}
 if(r.s===last){delete vPend[key];return}
 const p=vPend[key];if(p&&p.s===r.s)p.n++;else vPend[key]={s:r.s,n:1};
@@ -290,7 +300,23 @@ if(vPend[key].n>=VCONF){vFire(coin,iv,last,r.s,r.conf);vLast[key]=r.s;delete vPe
 /* ===== Veredicto en todas las temporalidades (independiente del gráfico) ===== */
 const ALLTF=['5m','15m','1h','4h','1d'];
 let vAll={},vAllBusy=false,vAllTimer=0,vAllGen=0;
-function renderVAll(){const el=$('vStatus');if(!el)return;const h=ALLTF.map(iv=>{const r=vAll[iv];return`<span class="vm"><i>${TFL[iv]}</i><b class="vpill ${r?r.s:''}">${r?NM[r.s]:'--'}</b></span>`}).join('');if(el._h!==h){el._h=h;el.innerHTML=h}}
+const TAG={ENTRAR:['ENTRAR','up'],CORRECCIÓN:['ESPERAR','down'],EXTENDIDO:['NO PERSEGUIR','warn'],NEUTRO:['CONFIRMAR','flat']};
+let vPlanLast=null,vPlanPend=null;
+function calcPlan(){const W={'15m':1,'1h':2,'4h':1},CF={Alta:1,Media:.75,Baja:.5};let sc=0,parts=[],n=0;
+for(const iv of['15m','1h','4h']){const r=vAll[iv];if(!r)continue;n++;const d=r.s==='LONG'?1:r.s==='SHORT'?-1:0;sc+=d*W[iv]*(CF[r.conf]||.5);parts.push(TFL[iv]+' '+NM[r.s])}
+const t5=vAll['5m'];if(!t5||n<2)return null;
+const dir=sc>=1?1:sc<=-1?-1:0,nm=dir===1?'LONG':'SHORT',ctx=parts.join(' · ');
+if(!dir)return{k:'SIN SESGO',cls:'flat',dir:0,head:'Sin sesgo claro',txt:'15m, 1h y 4h no coinciden ('+ctx+'). Sin dirección dominante: evita entrar o usa solo el 5m con stop muy corto.'};
+const T=tmg(t5,dir),tag=TAG[T.st];
+const head=T.st==='ENTRAR'?'ENTRAR '+nm+(T.q==='óptima'?' ★':''):T.st==='CORRECCIÓN'?'ESPERAR · sesgo '+nm:T.st==='EXTENDIDO'?'NO PERSIGAS · sesgo '+nm:'CONFIRMAR · sesgo '+nm;
+return{k:T.st+'|'+dir,cls:T.st==='ENTRAR'?'up':T.st==='CORRECCIÓN'?'down':T.st==='EXTENDIDO'?'warn':'flat',dir,st:T.st,q:T.q,head,txt:ctx+'. Gatillo en 5m: '+T.tx}}
+function renderVAll(){const el=$('vStatus');if(!el)return;const h=ALLTF.map(iv=>{const r=vAll[iv],g=r&&r.sh&&r.s!=='ESPERAR'?TAG[r.sh.st]:null;return`<span class="vm"><i>${TFL[iv]}</i><b class="vpill ${r?r.s:''}">${r?NM[r.s]:'--'}</b><em class="vtag ${g?g[1]:'flat'}">${g?g[0]+(r.sh.q==='óptima'?' ★':''):'—'}</em></span>`}).join('');if(el._h!==h){el._h=h;el.innerHTML=h}
+const pl=$('vPlan');if(!pl)return;const P=calcPlan();const ph=P?`<div class="vplan ${P.cls}"><b>Plan de scalping · ${P.head}</b><p>${P.txt}</p></div>`:'';if(pl._h!==ph){pl._h=ph;pl.innerHTML=ph}
+if(P&&P.dir)planAlert(P);else{vPlanPend=null;if(P)vPlanLast=P.k}}
+function planAlert(P){if(P.k===vPlanLast){vPlanPend=null;return}
+if(!vPlanPend||vPlanPend.k!==P.k)vPlanPend={k:P.k,n:1};else vPlanPend.n++;
+if(vPlanPend.n<VCONF)return;const prev=vPlanLast;vPlanLast=P.k;vPlanPend=null;
+if(prev!==null&&P.st==='ENTRAR'){const v=P.dir===1?'LONG':'SHORT',msg=`${state.coin}: sesgo ${v} (15m/1h/4h) + gatillo 5m a favor → ENTRAR${P.q==='óptima'?' · punto óptimo tras retroceso':''}`;toast(msg,9000);vib(v);beep(v);notifyVerdict(msg,'plan-'+state.coin,v,'Entrada MLL')}}
 async function vAllRun(){if(vAllBusy||document.hidden)return;vAllBusy=true;const coin=state.coin,gen=vAllGen,base='https://fapi.binance.com';
 try{const res=await Promise.all(ALLTF.map(async iv=>{try{const m=IV[iv],[kl,oh]=await Promise.all([get(`${base}/fapi/v1/klines?symbol=${coin}USDT&interval=${iv}&limit=60`),get(`${base}/futures/data/openInterestHist?symbol=${coin}USDT&period=${iv}&limit=60`)]);
 const C=kl.map(x=>({t:x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5],q:+x[7],tb:+x[9]})),lv=new Map(oh.map(x=>[Math.floor(+x.timestamp/m)*m,+x.sumOpenInterestValue])),N=C.length,cvdL=new Array(N),oiL=new Array(N).fill(null);let cum=0,prev=null;
@@ -298,7 +324,7 @@ for(let i=0;i<N;i++){const c=C[i];cum+=(2*c.tb-c.v)*c.c;cvdL[i]=cum;let v=lv.get
 return[iv,calcVerdict(C,cvdL,oiL,iv)]}catch{return[iv,null]}}));
 if(gen!==vAllGen||coin!==state.coin)return;
 for(const[iv,r]of res)if(r)vAll[iv]=r;renderVAll()}finally{vAllBusy=false}}
-function vAllStart(){clearInterval(vAllTimer);vAllGen++;vAll={};renderVAll();vAllRun();vAllTimer=setInterval(vAllRun,15000)}
+function vAllStart(){clearInterval(vAllTimer);vAllGen++;vAll={};vPlanLast=null;vPlanPend=null;renderVAll();vAllRun();vAllTimer=setInterval(vAllRun,15000)}
 
 /* ===== Squeeze de shorts (sube) y de longs (baja), puntaje 0-100 ===== */
 const SQ={fundFull:.0003,fundBase:.0001,fundFullL:.0005,lsSpan:.3,oiSpan:.15,dtcLo:.1,dtcHi:.4,liqMult:8,fuelMin:30,sparkMin:30,brkN:20,confVol:1.5,dispLo:1.5,dispSpan:2.5,impMin:35,impDisp:.5,cBody:1.2};
@@ -347,7 +373,7 @@ return`<div class="sqside"><div class="sqhead"><div><b>${L?'SQUEEZE DE LONGS ↓
 `<div class="vstats">${chip('Funding',fFmt,o.sFund)}${chip('L/S cuentas',lsFmt,o.sLS)}${chip('OI vs prom.',pctTxt(s.oiRel),o.sOI)}${chip(L?'Días p/cubrir (longs)':'Días p/cubrir',o.dtc.toFixed(2),o.sDTC)}</div>`+
 `<div class="vstats" style="margin-top:6px">${chip(L?'Ruptura abajo':'Ruptura arriba',o.brk?'Sí':'No',o.brk?1:0)}${chip('Vol. relativo',s.rvol.toFixed(1)+'×',o.sRV)}${chip(L?'Liq. longs 15m':'Liq. shorts 15m','$'+money(o.liq,0),o.sCat)}</div><div class="vstats" style="margin-top:6px">${chip('Cierre de vela',o.conf?'✔ Confirmado':o.cbrk?'Rompió, falta vol.':'Sin confirmar',o.conf?1:0)}${chip('Vol. vela cerrada',o.rvC.toFixed(1)+'×',o.rvC>=SQ.confVol?1:0)}</div><p class="vtext" style="margin-top:10px">${txt}</p></div>`};
 const h=side(s.S,false)+side(s.L,true);if(el._h!==h){el._h=h;el.innerHTML=h}}
-function vStart(){clearInterval(vTimer);vGen++;vLast={};vSh={};vPend={};state.vFresh=null;sqLast={};sqPend={};sqConf={};state.sq=null;renderSq();vMonitor();vTimer=setInterval(vMonitor,VPOLL)}
+function vStart(){clearInterval(vTimer);vGen++;vLast={};vPend={};state.vFresh=null;sqLast={};sqPend={};sqConf={};state.sq=null;renderSq();vMonitor();vTimer=setInterval(vMonitor,VPOLL)}
 function bindV(){const first=()=>{unlockAudio();if('Notification'in window&&Notification.permission==='default'){try{Notification.requestPermission()}catch{}}wakeSet(true)};
 document.addEventListener('pointerdown',first,{passive:true,once:true});document.addEventListener('pointerdown',unlockAudio,{passive:true});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){wakeSet(true);vMonitor();vAllRun();pollPrice();pollKline()}});
