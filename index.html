@@ -26,6 +26,11 @@
 .vstats span{flex:1;min-width:84px;background:#111d2e;border-radius:8px;padding:7px 8px;font-size:10px;color:var(--muted)}
 .vstats b{display:block;font-size:13px;margin-top:2px}.vstats .up{color:var(--green)}.vstats .down{color:var(--red)}.vstats .flat{color:var(--text)}
 .vtext{margin:0 0 6px;font-size:12px;line-height:1.5;color:var(--text)}
+.vshort{margin:2px 0 10px;padding:9px;border-radius:10px;border:1px solid var(--line);background:#0e1726}
+.vshort.ENTRAR{border-color:#20c99788}.vshort.CORRECCIÓN{border-color:#ef647888}.vshort.EXTENDIDO{border-color:#f3ad4388}
+.vshead{display:flex;justify-content:space-between;align-items:center;gap:8px}.vshead b{font-size:11.5px}
+.vspill{padding:4px 9px;border-radius:7px;font-size:11px;font-weight:850;background:#8493aa22;color:var(--muted);border:1px solid #8493aa55}
+.vspill.ENTRAR{background:#20c99722;color:var(--green);border-color:#20c99766}.vspill.CORRECCIÓN{background:#ef647822;color:var(--red);border-color:#ef647866}.vspill.EXTENDIDO{background:#f3ad4322;color:var(--gold);border-color:#f3ad4366}
 .vnote{display:block;font-size:9.5px;color:var(--muted);line-height:1.4}
 
 .vmon{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.vm{flex:1;min-width:58px;background:#111d2e;border-radius:8px;padding:7px 6px;text-align:center;font-size:10px;color:var(--muted)}.vm.off{opacity:.35}.vm i{display:block;font-style:normal;margin-bottom:5px;font-weight:700}.vm .vpill{display:block;min-width:0;padding:5px 2px;font-size:10px;letter-spacing:0}.vm .vpill:empty,.vm .vpill.undefined{background:#17243a;color:var(--muted);border:1px solid var(--line)}.vlog{margin-top:8px}.vchk{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin-top:12px}.vchk input{accent-color:var(--gold);width:16px;height:16px}
@@ -140,7 +145,7 @@ let m=0;for(let i=start;i<end;i++){const d=barArr[i];if(d!=null)m=Math.max(m,Mat
 if(m>0)for(let i=start;i<end;i++){const d=barArr[i];if(d==null)continue;const h=Math.max(1,Math.abs(d)/m*(bh/2-1));x.fillStyle=d>=0?'#2ee6a8':'#ff5a72';x.fillRect(xs(i)-cw/2,d>=0?mid-h:mid,cw,h)}
 if(m>0){x.fillStyle='#8f84b8';x.fillText(fmtK(m),hr+4,by0+8)}}
 
-const WIN={'5m':12,'15m':12,'1h':12,'4h':10,'1d':7};
+const WIN={'5m':12,'15m':12,'1h':12,'4h':10,'1d':7};const SWIN={'5m':3,'15m':3,'1h':3,'4h':3,'1d':2};
 const THR={'5m':[.0006,.0012],'15m':[.0012,.002],'1h':[.0025,.004],'4h':[.005,.008],'1d':[.012,.015]};
 function fmtSpan(ms){const m=Math.round(ms/6e4);return m<60?m+' min':m<2880?Math.round(m/60)+' h':Math.round(m/1440)+' días'}
 function pctTxt(v){return(v>=0?'+':'')+(v*100).toFixed(2)+'%'}
@@ -166,13 +171,28 @@ if(P===1){
  else R('ESPERAR','Baja','Precio lateral y sin flujo claro. Mejor esperar ruptura.');
 }
 if(!hasO&&conf==='Alta')conf='Media';
-return{s,conf,t,k,pc,o,cr,P,O,V,hasO}}
+/* ---- Ventana corta (timing de entrada para scalping) ---- */
+let sh=null;
+{const ks=Math.min(SWIN[iv]||3,N-1),a3=b-ks,pt3=pt*.5;
+const pc3=C[b].c/C[a3].c-1;let vol3=0;for(let i=a3+1;i<=b;i++)vol3+=C[i].q;
+const cr3=vol3>0?(cvdL[b]-cvdL[a3])/vol3:0,o3=(oiL[a3]!=null&&oiL[b]!=null)?oiL[b]/oiL[a3]-1:null;
+const P3=pc3>pt3?1:pc3<-pt3?-1:0,V3=cr3>.02?1:cr3<-.02?-1:0;
+let hi=-Infinity,lo=Infinity;for(let i=a+1;i<=b;i++){if(C[i].h>hi)hi=C[i].h;if(C[i].l<lo)lo=C[i].l}
+const dir=s==='LONG'?1:s==='SHORT'?-1:0;let st='NEUTRO',tx='Sin sesgo claro en la ventana principal: no hay entrada que validar.';
+const retr=dir===1?C[b].c/hi-1:dir===-1?C[b].c/lo-1:0;
+if(dir!==0){const sc=(P3+V3)*dir,bad=(P3===-dir)||(V3===-dir),ext=pc*dir>2.5*pt;
+ if(bad&&sc<=0){st='CORRECCIÓN';tx=(dir===1?'El flujo de las últimas '+ks+' velas va en contra (cae/vende) mientras el sesgo es LONG.':'El flujo de las últimas '+ks+' velas va en contra (sube/compra) mientras el sesgo es SHORT.')+' No entres ahora: espera que frene en soporte/resistencia o que el flujo corto vuelva a favor.'}
+ else if(sc>=1&&!bad){if(ext){st='EXTENDIDO';tx='El flujo corto sigue a favor, pero el precio ya corrió mucho en la ventana principal. Entrar aquí es perseguir: mejor esperar un retroceso.'}else{st='ENTRAR';tx='El flujo corto confirma el sesgo '+s+'. Momento válido para buscar entrada con stop corto.'}}
+ else{st='NEUTRO';tx='El flujo corto está sin dirección clara. Espera una vela más que confirme.'}}
+sh={ks,pc3,cr3,o3,P3,V3,st,tx,retr,dir}}
+return{s,conf,t,k,pc,o,cr,P,O,V,hasO,sh}}
 function renderVerdict(C,cvdL,oiL){const iv=state.interval,f=state.vFresh;const r=(f&&f.coin===state.coin&&f.iv===iv&&Date.now()-f.t<35000)?f.r:calcVerdict(C,cvdL,oiL,iv);renderVerdictR(r,iv)}
 function renderVerdictR(r,iv){
-const el=$('verdict');if(!el||!r)return;const{s,conf,t,k,pc,o,cr,P,O,V,hasO}=r;
+const el=$('verdict');if(!el||!r)return;const{s,conf,t,k,pc,o,cr,P,O,V,hasO,sh}=r;
 const cls=v=>v>0?'up':v<0?'down':'flat';
 const html=`<div class="vhead"><span class="vpill ${s}">${s}</span><div><b>Veredicto OI + CVD · ${iv==='1d'?'1D':iv}</b><small>Ventana: últimas ${k} velas (${fmtSpan(k*(IV[iv]||0))}) · confianza ${conf}</small></div></div>`+
 `<div class="vstats"><span>Precio<b class="${cls(P)}">${pctTxt(pc)}</b></span><span>Open Interest<b class="${cls(O)}">${hasO?pctTxt(o):'--'}</b></span><span>CVD / volumen<b class="${cls(V)}">${pctTxt(cr)}</b></span></div>`+
+(sh?`<div class="vshort ${sh.st}"><div class="vshead"><b>Corto plazo · últimas ${sh.ks} velas (${fmtSpan(sh.ks*(IV[iv]||0))})</b><span class="vspill ${sh.st}">${sh.st}</span></div><div class="vstats"><span>Precio<b class="${cls(sh.P3)}">${pctTxt(sh.pc3)}</b></span><span>OI<b class="${cls(sh.o3==null?0:sh.o3>0?1:-1)}">${sh.o3==null?'--':pctTxt(sh.o3)}</b></span><span>CVD / vol<b class="${cls(sh.V3)}">${pctTxt(sh.cr3)}</b></span>${sh.dir?`<span>Desde ${sh.dir>0?'máx':'mín'}<b class="${sh.retr<0===(sh.dir>0)?'down':'flat'}">${pctTxt(sh.retr)}</b></span>`:''}</div><p class="vtext">${sh.tx}</p></div>`:'')+
 `<p class="vtext">${t}${hasO?'':' (OI no disponible: lectura solo con precio y CVD.)'}</p><small class="vnote">Lectura del flujo reciente de Binance Futures; cambia al elegir otra temporalidad. Alerta automática (sonido y vibración) cuando el veredicto cambia. No garantiza resultado: confirma con tu estrategia y usa stop.</small>`;
 if(el._h!==html){el._h=html;el.innerHTML=html}}
 function drawSubs(start,end,count,colW,left,hr){
@@ -252,6 +272,7 @@ function vib(v){try{if(navigator.vibrate)navigator.vibrate(VIB[v]||VIB.ESPERAR)}
 async function notifyVerdict(msg,key,v,title){if(!('Notification'in window)||Notification.permission!=='granted')return;try{const o={body:msg,icon:'mll-192.png',badge:'mll-192.png',tag:key,renotify:true,vibrate:VIB[v]||VIB.ESPERAR,requireInteraction:false};const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg&&reg.showNotification){await reg.showNotification((title||'Veredicto MLL'),o);return}new Notification((title||'Veredicto MLL'),o)}catch{}}
 async function wakeSet(on){try{if(on&&'wakeLock'in navigator){if(wl)return;wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}else if(wl){await wl.release();wl=null}}catch{}}
 function vFire(coin,iv,from,to,conf){const msg=`${coin} ${TFL[iv]}: ${NM[from]} → ${NM[to]} (confianza ${conf})`;toast(msg,9000);vib(to);beep(to);notifyVerdict(msg,'v-'+coin+'-'+iv,to)}
+let vSh={};
 async function vMonitor(){const coin=state.coin,iv=state.interval,key=coin+'-'+iv,gen=vGen;if(vBusy[key])return;vBusy[key]=true;
 try{const m=IV[iv],base='https://fapi.binance.com',[kl,oh]=await Promise.all([get(`${base}/fapi/v1/klines?symbol=${coin}USDT&interval=${iv}&limit=60`),get(`${base}/futures/data/openInterestHist?symbol=${coin}USDT&period=${iv}&limit=60`)]);
 const C=kl.map(x=>({t:x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5],q:+x[7],tb:+x[9]})),lv=new Map(oh.map(x=>[Math.floor(+x.timestamp/m)*m,+x.sumOpenInterestValue])),N=C.length,cvdL=new Array(N),oiL=new Array(N).fill(null);let cum=0,prev=null;
@@ -259,6 +280,7 @@ for(let i=0;i<N;i++){const c=C[i];cum+=(2*c.tb-c.v)*c.c;cvdL[i]=cum;let v=lv.get
 const r=calcVerdict(C,cvdL,oiL,iv);
 if(gen!==vGen||coin!==state.coin||iv!==state.interval||!r)return;
 state.vFresh={coin,iv,r,t:Date.now()};renderVerdictR(r,iv);sqRun(coin,iv,C,oh,gen);
+if(r.sh){const ps=vSh[key];if(ps!==undefined&&ps!==r.sh.st&&r.sh.st==='ENTRAR'){const m2=`${coin} ${TFL[iv]}: ${r.s} + flujo corto a favor → ENTRAR (momento de scalping)`;toast(m2,9000);vib(r.s);beep(r.s);notifyVerdict(m2,'sh-'+coin+'-'+iv,r.s,'Entrada MLL')}vSh[key]=r.sh.st}
 const last=vLast[key];if(last===undefined){vLast[key]=r.s;return}
 if(r.s===last){delete vPend[key];return}
 const p=vPend[key];if(p&&p.s===r.s)p.n++;else vPend[key]={s:r.s,n:1};
@@ -325,7 +347,7 @@ return`<div class="sqside"><div class="sqhead"><div><b>${L?'SQUEEZE DE LONGS ↓
 `<div class="vstats">${chip('Funding',fFmt,o.sFund)}${chip('L/S cuentas',lsFmt,o.sLS)}${chip('OI vs prom.',pctTxt(s.oiRel),o.sOI)}${chip(L?'Días p/cubrir (longs)':'Días p/cubrir',o.dtc.toFixed(2),o.sDTC)}</div>`+
 `<div class="vstats" style="margin-top:6px">${chip(L?'Ruptura abajo':'Ruptura arriba',o.brk?'Sí':'No',o.brk?1:0)}${chip('Vol. relativo',s.rvol.toFixed(1)+'×',o.sRV)}${chip(L?'Liq. longs 15m':'Liq. shorts 15m','$'+money(o.liq,0),o.sCat)}</div><div class="vstats" style="margin-top:6px">${chip('Cierre de vela',o.conf?'✔ Confirmado':o.cbrk?'Rompió, falta vol.':'Sin confirmar',o.conf?1:0)}${chip('Vol. vela cerrada',o.rvC.toFixed(1)+'×',o.rvC>=SQ.confVol?1:0)}</div><p class="vtext" style="margin-top:10px">${txt}</p></div>`};
 const h=side(s.S,false)+side(s.L,true);if(el._h!==h){el._h=h;el.innerHTML=h}}
-function vStart(){clearInterval(vTimer);vGen++;vLast={};vPend={};state.vFresh=null;sqLast={};sqPend={};sqConf={};state.sq=null;renderSq();vMonitor();vTimer=setInterval(vMonitor,VPOLL)}
+function vStart(){clearInterval(vTimer);vGen++;vLast={};vSh={};vPend={};state.vFresh=null;sqLast={};sqPend={};sqConf={};state.sq=null;renderSq();vMonitor();vTimer=setInterval(vMonitor,VPOLL)}
 function bindV(){const first=()=>{unlockAudio();if('Notification'in window&&Notification.permission==='default'){try{Notification.requestPermission()}catch{}}wakeSet(true)};
 document.addEventListener('pointerdown',first,{passive:true,once:true});document.addEventListener('pointerdown',unlockAudio,{passive:true});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){wakeSet(true);vMonitor();vAllRun();pollPrice();pollKline()}});
