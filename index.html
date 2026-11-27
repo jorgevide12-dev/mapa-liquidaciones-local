@@ -279,20 +279,22 @@ for(const[iv,r]of res)if(r)vAll[iv]=r;renderVAll()}finally{vAllBusy=false}}
 function vAllStart(){clearInterval(vAllTimer);vAllGen++;vAll={};renderVAll();vAllRun();vAllTimer=setInterval(vAllRun,15000)}
 
 /* ===== Squeeze de shorts (sube) y de longs (baja), puntaje 0-100 ===== */
-const SQ={fundFull:.0003,fundBase:.0001,fundFullL:.0005,lsSpan:.3,oiSpan:.15,dtcLo:.1,dtcHi:.4,liqMult:8,fuelMin:30,sparkMin:30,brkN:20};
-const SQR={'SIN SEÑAL':0,'CARGADO':1,'EN MARCHA':2};
+const SQ={fundFull:.0003,fundBase:.0001,fundFullL:.0005,lsSpan:.3,oiSpan:.15,dtcLo:.1,dtcHi:.4,liqMult:8,fuelMin:30,sparkMin:30,brkN:20,confVol:1.5,dispLo:1.5,dispSpan:2.5,impMin:35,impDisp:.5,cBody:1.2};
+const SQR={'SIN SEÑAL':0,'CARGADO':1,'IMPULSO':2,'EN MARCHA':3};
 const clampq=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),avgq=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
-let sqLS=null,sqLast={},sqPend={},sqBusy=false;
+let sqLS=null,sqLast={},sqPend={},sqBusy=false,sqConf={};
 /*SQCALC*/
-function sqStage(fuel,spark){return fuel>=SQ.fuelMin&&spark>=SQ.sparkMin?'EN MARCHA':fuel>=SQ.fuelMin?'CARGADO':'SIN SEÑAL'}
+function sqStage(fuel,spark,brk,sd){return fuel>=SQ.fuelMin&&spark>=SQ.sparkMin?'EN MARCHA':fuel<SQ.fuelMin&&brk&&sd>=SQ.impDisp&&spark>=SQ.impMin?'IMPULSO':fuel>=SQ.fuelMin?'CARGADO':'SIN SEÑAL'}
 function sqCalc(p){const{C,oh,ratio,f,price,oi,iv,liqS,liqL,minimum,now}=p,N=C.length,b=N-1,m=IV[iv];if(N<SQ.brkN+3)return null;
 const oiVals=oh.map(x=>+x.sumOpenInterestValue).filter(x=>x>0),oiNow=oi>0?oi:(oiVals.length?oiVals[oiVals.length-1]:0),oiAvg=avgq(oiVals),oiRel=oiAvg>0?oiNow/oiAvg-1:0;
 const r=ratio>0?ratio:1,dayQ=avgq(C.slice(0,b).map(c=>c.q))*(864e5/m),px=price||C[b].c,sOI=clampq(oiRel/SQ.oiSpan);
 const win=C.slice(b-SQ.brkN,b),prevHigh=Math.max(...win.map(c=>c.h)),prevLow=Math.min(...win.map(c=>c.l));
 const el=clampq((now-C[b].t)/m,.25,1),proj=C[b].q/el,base=avgq(C.slice(Math.max(0,b-21),b-1).map(c=>c.q)),rvol=base>0?Math.max(C[b-1].q,proj)/base:0,sRV=clampq((rvol-1)/2);
-const mk=(sFund,sLS,dtc,brk,liq)=>{const sDTC=clampq((dtc-SQ.dtcLo)/(SQ.dtcHi-SQ.dtcLo)),sCat=clampq(liq/(SQ.liqMult*minimum)),fuel=10*(sFund+sLS+sOI)+20*sDTC,spark=(brk?15:0)+20*sRV+15*sCat;return{fuel,spark,total:fuel+spark,stage:sqStage(fuel,spark),sFund,sLS,sOI,sDTC,sRV,sCat,dtc,brk,liq}};
-const S=mk(f!=null&&f<0?clampq(-f/SQ.fundFull):0,ratio>0?clampq((1-ratio)/SQ.lsSpan):0,dayQ>0?(oiNow/(1+r))/dayQ:0,px>prevHigh,liqS);
-const L=mk(f!=null&&f>SQ.fundBase?clampq((f-SQ.fundBase)/(SQ.fundFullL-SQ.fundBase)):0,ratio>0?clampq((ratio-1)/SQ.lsSpan):0,dayQ>0?(oiNow*r/(1+r))/dayQ:0,px<prevLow,liqL);
+const winC=C.slice(Math.max(0,b-1-SQ.brkN),b-1),hiC=Math.max(...winC.map(c=>c.h)),loC=Math.min(...winC.map(c=>c.l)),baseC=avgq(C.slice(Math.max(0,b-1-20),b-1).map(c=>c.q)),rvC=baseC>0?C[b-1].q/baseC:0,cl=C[b-1].c,clT=C[b-1].t;
+const atr=avgq(C.slice(Math.max(0,b-16),Math.max(1,b-3)).map(c=>c.h-c.l))||1e-9,o3=C[Math.max(0,b-4)].o,cO=C[b-1].o,rec=C.slice(Math.max(0,b-4)),pre=C.slice(Math.max(0,b-24),Math.max(1,b-4)),recHi=Math.max(...rec.map(c=>c.h)),recLo=Math.min(...rec.map(c=>c.l)),preHi=Math.max(...pre.map(c=>c.h)),preLo=Math.min(...pre.map(c=>c.l)),brkRU=recHi>preHi,brkRL=recLo<preLo;
+const mk=(sFund,sLS,dtc,brk,liq,cbrk,mv,cbody)=>{const sDisp=clampq((mv/atr-SQ.dispLo)/SQ.dispSpan),cd=cbody/atr>=SQ.cBody;const sDTC=clampq((dtc-SQ.dtcLo)/(SQ.dtcHi-SQ.dtcLo)),sCat=clampq(liq/(SQ.liqMult*minimum)),fuel=10*(sFund+sLS+sOI)+20*sDTC,spark=(brk?10:0)+15*sRV+10*sCat+15*sDisp;return{fuel,spark,total:fuel+spark,stage:sqStage(fuel,spark,brk,sDisp),sDisp,sFund,sLS,sOI,sDTC,sRV,sCat,dtc,brk,liq,cbrk,conf:cbrk&&rvC>=SQ.confVol&&(fuel>=SQ.fuelMin||cd),rvC,clT}};
+const S=mk(f!=null&&f<0?clampq(-f/SQ.fundFull):0,ratio>0?clampq((1-ratio)/SQ.lsSpan):0,dayQ>0?(oiNow/(1+r))/dayQ:0,px>prevHigh||brkRU,liqS,cl>hiC,px-o3,cl-cO);
+const L=mk(f!=null&&f>SQ.fundBase?clampq((f-SQ.fundBase)/(SQ.fundFullL-SQ.fundBase)):0,ratio>0?clampq((ratio-1)/SQ.lsSpan):0,dayQ>0?(oiNow*r/(1+r))/dayQ:0,px<prevLow||brkRL,liqL,cl<loC,o3-px,cO-cl);
 return{S,L,f,ratio,oiRel,rvol}}
 /*ENDSQCALC*/
 async function sqRun(coin,iv,C,oh,gen){if(sqBusy)return;sqBusy=true;
@@ -302,26 +304,28 @@ if(gen!==vGen||coin!==state.coin||iv!==state.interval)return;
 const now=Date.now(),sumL=sd=>state.events.filter(e=>e.side===sd&&now-e.time<9e5).reduce((a,e)=>a+e.notional,0);
 const res=sqCalc({C,oh,ratio:sqLS&&sqLS.key===key?sqLS.ratio:null,f:state.funding===undefined?null:state.funding,price:state.price,oi:state.oi&&state.price?state.oi*state.price:0,iv,liqS:sumL('SHORT'),liqL:sumL('LONG'),minimum:state.minimum,now});
 if(!res)return;state.sq={coin,iv,t:now,...res};renderSq();
-for(const[sd,o]of[['S',res.S],['L',res.L]]){const k=key+sd,st=o.stage,last=sqLast[k];
+for(const[sd,o]of[['S',res.S],['L',res.L]]){const kc=key+sd+'c';if(sqConf[kc]===undefined)sqConf[kc]=o.clT;else if(o.clT!==sqConf[kc]){sqConf[kc]=o.clT;if(o.conf)sqConfFire(coin,iv,sd,o)}
+const k=key+sd,st=o.stage,last=sqLast[k];
 if(last===undefined){sqLast[k]=st;continue}
 if(st===last){delete sqPend[k];continue}
 const pp=sqPend[k];if(pp&&pp.s===st)pp.n++;else sqPend[k]={s:st,n:1};
 if(sqPend[k].n>=VCONF){if(SQR[st]>SQR[last])sqFire(coin,iv,sd,st,o);sqLast[k]=st;delete sqPend[k]}}
 }catch{}finally{sqBusy=false}}
-function beepSq(st,sd){unlockAudio();if(!actx)return;const up=sd!=='L';if(st==='EN MARCHA'){const q=up?[660,880,1100]:[1100,880,660];for(let r=0;r<4;r++)q.forEach((f,i)=>tone(f,r*.6+i*.14,.14,.85))}else{const q=up?[740,880]:[880,740];for(let r=0;r<2;r++)q.forEach((f,i)=>tone(f,r*.7+i*.2,.16,.8))}}
-function sqFire(coin,iv,sd,st,o){const nm=sd==='L'?'LONGS ↓':'SHORTS ↑',msg=`${coin} ${TFL[iv]}: SQUEEZE DE ${nm} ${st} · ${Math.round(o.total)}/100 (combustible ${Math.round(o.fuel)}, chispa ${Math.round(o.spark)})`,k=st==='EN MARCHA'?'SQ2':'SQ1';toast(msg,10000);vib(k);beepSq(st,sd);notifyVerdict(msg,'sq-'+coin+'-'+iv+sd,k,'Squeeze MLL')}
+function beepSq(st,sd){unlockAudio();if(!actx)return;const up=sd!=='L';if(st==='EN MARCHA'||st==='IMPULSO'){const q=up?[660,880,1100]:[1100,880,660];for(let r=0;r<4;r++)q.forEach((f,i)=>tone(f,r*.6+i*.14,.14,.85))}else{const q=up?[740,880]:[880,740];for(let r=0;r<2;r++)q.forEach((f,i)=>tone(f,r*.7+i*.2,.16,.8))}}
+function sqFire(coin,iv,sd,st,o){const nm=sd==='L'?'LONGS ↓':'SHORTS ↑',msg=`${coin} ${TFL[iv]}: SQUEEZE DE ${nm} ${st} · ${Math.round(o.total)}/100 (combustible ${Math.round(o.fuel)}, chispa ${Math.round(o.spark)})${st==='IMPULSO'?' · ruptura fuerte sin shorts apilados: más riesgo de reversión':''}`,k=(st==='EN MARCHA'||st==='IMPULSO')?'SQ2':'SQ1';toast(msg,10000);vib(k);beepSq(st,sd);notifyVerdict(msg,'sq-'+coin+'-'+iv+sd,k,'Squeeze MLL')}
+function sqConfFire(coin,iv,sd,o){const nm=sd==='L'?'LONGS ↓':'SHORTS ↑',msg=`${coin} ${TFL[iv]}: SQUEEZE DE ${nm} CONFIRMADO AL CIERRE · vela cerró fuera del rango de 20 velas con volumen ${o.rvC.toFixed(1)}×`;toast(msg,12000);vib('SQ2');beepSq('EN MARCHA',sd);notifyVerdict(msg,'sqc-'+coin+'-'+iv+sd+'-'+o.clT,'SQ2','Squeeze confirmado MLL')}
 function renderSq(){const el=$('sqBody');if(!el)return;const s=state.sq,ok=s&&s.coin===state.coin&&s.iv===state.interval;
 if(!ok){const h='<p class="vtext">Calculando…</p>';if(el._h!==h){el._h=h;el.innerHTML=h}return}
 const chip=(l,v,sc)=>`<span>${l}<b class="${sc>=.5?'up':'flat'}">${v}</b></span>`,fFmt=s.f==null?'--':(s.f*100).toFixed(4)+'%',lsFmt=s.ratio>0?s.ratio.toFixed(2):'--';
-const side=(o,L)=>{const fu=o.fuel>=SQ.fuelMin,sp=o.spark>=SQ.sparkMin,pc=o.stage==='EN MARCHA'?(L?'sq2d':'sq2'):o.stage==='CARGADO'?'sq1':'sq0',gf=L?'linear-gradient(90deg,#8a5a14,var(--gold))':'linear-gradient(90deg,#8a5a14,var(--gold))',gs=L?'linear-gradient(90deg,#8b2c3a,var(--red))':'linear-gradient(90deg,#126b5b,var(--green))';
-const txt=L?(fu&&sp?'Lado largo cargado y el precio rompe a la baja con volumen: posible long squeeze en curso (los longs son liquidados o venden para cerrar).':fu?'Hay combustible (longs apilados) pero aún no hay chispa. Vigila una ruptura a la baja con volumen o liquidaciones de longs.':sp?'Hay ruptura a la baja con volumen, pero sin longs apilados: parece una caída normal, no un squeeze.':'Sin combustible ni chispa suficientes para un squeeze de longs.')
-:(fu&&sp?'Lado corto cargado y el precio rompe al alza con volumen: posible short squeeze en curso (los shorts recompran para cerrar).':fu?'Hay combustible (shorts apilados) pero aún no hay chispa. Vigila una ruptura al alza con volumen o liquidaciones de shorts.':sp?'Hay ruptura al alza con volumen, pero sin shorts apilados: parece una subida normal, no un squeeze.':'Sin combustible ni chispa suficientes para un squeeze de shorts.');
+const side=(o,L)=>{const fu=o.fuel>=SQ.fuelMin,sp=o.spark>=SQ.sparkMin,pc=(o.stage==='EN MARCHA'||o.stage==='IMPULSO')?(L?'sq2d':'sq2'):o.stage==='CARGADO'?'sq1':'sq0',gf=L?'linear-gradient(90deg,#8a5a14,var(--gold))':'linear-gradient(90deg,#8a5a14,var(--gold))',gs=L?'linear-gradient(90deg,#8b2c3a,var(--red))':'linear-gradient(90deg,#126b5b,var(--green))';
+const txt=L?(fu&&sp?'Lado largo cargado y el precio rompe a la baja con volumen: posible long squeeze en curso (los longs son liquidados o venden para cerrar).':fu?'Hay combustible (longs apilados) pero aún no hay chispa. Vigila una ruptura a la baja con volumen o liquidaciones de longs.':o.stage==='IMPULSO'?'IMPULSO bajista: ruptura fuerte con volumen y velas grandes, aunque el funding no muestra longs apilados. Es momentum (más riesgo de rebote); confirma con el cierre de vela.':sp?'Hay ruptura a la baja con volumen, pero sin longs apilados: parece una caída normal, no un squeeze.':'Sin combustible ni chispa suficientes para un squeeze de longs.')
+:(fu&&sp?'Lado corto cargado y el precio rompe al alza con volumen: posible short squeeze en curso (los shorts recompran para cerrar).':fu?'Hay combustible (shorts apilados) pero aún no hay chispa. Vigila una ruptura al alza con volumen o liquidaciones de shorts.':o.stage==='IMPULSO'?'IMPULSO alcista: ruptura fuerte con volumen y velas grandes, aunque el funding no muestra shorts apilados. Es momentum (más riesgo de reversión); confirma con el cierre de vela.':sp?'Hay ruptura al alza con volumen, pero sin shorts apilados: parece una subida normal, no un squeeze.':'Sin combustible ni chispa suficientes para un squeeze de shorts.');
 return`<div class="sqside"><div class="sqhead"><div><b>${L?'SQUEEZE DE LONGS ↓':'SQUEEZE DE SHORTS ↑'}</b><small>${L?'baja por cierre forzado de longs':'sube por recompra de shorts'}</small></div><span class="sqN">${Math.round(o.total)}<i>/100</i></span><span class="${pc}">${o.stage}</span></div>`+
 `<div class="sqbars"><div><label>Combustible <span><b>${Math.round(o.fuel)}</b>/50</span></label><div class="sqb"><i style="width:${o.fuel*2}%;background:${gf}"></i></div></div><div><label>Chispa <span><b>${Math.round(o.spark)}</b>/50</span></label><div class="sqb"><i style="width:${o.spark*2}%;background:${gs}"></i></div></div></div>`+
 `<div class="vstats">${chip('Funding',fFmt,o.sFund)}${chip('L/S cuentas',lsFmt,o.sLS)}${chip('OI vs prom.',pctTxt(s.oiRel),o.sOI)}${chip(L?'Días p/cubrir (longs)':'Días p/cubrir',o.dtc.toFixed(2),o.sDTC)}</div>`+
-`<div class="vstats" style="margin-top:6px">${chip(L?'Ruptura abajo':'Ruptura arriba',o.brk?'Sí':'No',o.brk?1:0)}${chip('Vol. relativo',s.rvol.toFixed(1)+'×',o.sRV)}${chip(L?'Liq. longs 15m':'Liq. shorts 15m','$'+money(o.liq,0),o.sCat)}</div><p class="vtext" style="margin-top:10px">${txt}</p></div>`};
+`<div class="vstats" style="margin-top:6px">${chip(L?'Ruptura abajo':'Ruptura arriba',o.brk?'Sí':'No',o.brk?1:0)}${chip('Vol. relativo',s.rvol.toFixed(1)+'×',o.sRV)}${chip(L?'Liq. longs 15m':'Liq. shorts 15m','$'+money(o.liq,0),o.sCat)}</div><div class="vstats" style="margin-top:6px">${chip('Cierre de vela',o.conf?'✔ Confirmado':o.cbrk?'Rompió, falta vol.':'Sin confirmar',o.conf?1:0)}${chip('Vol. vela cerrada',o.rvC.toFixed(1)+'×',o.rvC>=SQ.confVol?1:0)}</div><p class="vtext" style="margin-top:10px">${txt}</p></div>`};
 const h=side(s.S,false)+side(s.L,true);if(el._h!==h){el._h=h;el.innerHTML=h}}
-function vStart(){clearInterval(vTimer);vGen++;vLast={};vPend={};state.vFresh=null;sqLast={};sqPend={};state.sq=null;renderSq();vMonitor();vTimer=setInterval(vMonitor,VPOLL)}
+function vStart(){clearInterval(vTimer);vGen++;vLast={};vPend={};state.vFresh=null;sqLast={};sqPend={};sqConf={};state.sq=null;renderSq();vMonitor();vTimer=setInterval(vMonitor,VPOLL)}
 function bindV(){const first=()=>{unlockAudio();if('Notification'in window&&Notification.permission==='default'){try{Notification.requestPermission()}catch{}}wakeSet(true)};
 document.addEventListener('pointerdown',first,{passive:true,once:true});document.addEventListener('pointerdown',unlockAudio,{passive:true});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){wakeSet(true);vMonitor();vAllRun();pollPrice();pollKline()}});
