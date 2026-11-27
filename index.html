@@ -184,7 +184,9 @@ const pc3=C[b].c/C[a3].c-1;let vol3=0;for(let i=a3+1;i<=b;i++)vol3+=C[i].q;
 const cr3=vol3>0?(cvdL[b]-cvdL[a3])/vol3:0,o3=(oiL[a3]!=null&&oiL[b]!=null)?oiL[b]/oiL[a3]-1:null;
 const P3=pc3>pt3?1:pc3<-pt3?-1:0,V3=cr3>.02?1:cr3<-.02?-1:0;
 let hi=-Infinity,lo=Infinity;for(let i=a+1;i<=b;i++){if(C[i].h>hi)hi=C[i].h;if(C[i].l<lo)lo=C[i].l}
-sh={ks,pc3,cr3,o3,P3,V3,rh:C[b].c/hi-1,rl:C[b].c/lo-1,pt}}
+let atr=0;{const n=Math.min(14,b);for(let i=b-n+1;i<=b;i++){const pcl=C[i-1].c;atr+=Math.max(C[i].h-C[i].l,Math.abs(C[i].h-pcl),Math.abs(C[i].l-pcl))}atr/=Math.max(n,1)}
+let rv=null;{const n=Math.min(20,b-1);if(n>=5){let m=0;for(let i=b-n;i<b;i++)m+=C[i].q;m/=n;const lq=C[b-1].q;rv=m>0?lq/m:null}}
+sh={ks,pc3,cr3,o3,P3,V3,rh:C[b].c/hi-1,rl:C[b].c/lo-1,pt,atr,rv,hi,lo,px:C[b].c}}
 const res={s,conf,t,k,pc,o,cr,P,O,V,hasO,sh};
 const dir0=s==='LONG'?1:s==='SHORT'?-1:0;
 Object.assign(sh,tmg(res,dir0),{dir:dir0});
@@ -315,7 +317,12 @@ if(T.st==='ENTRAR'&&!(ok5&&ok15)){const f=[];if(!ok15)f.push('15m está en '+(r1
 T={st:'CORRECCIÓN',q:'',retr:T.retr,tx:'El gatillo corto es válido, pero falta confirmación: '+f.join(' y ')+' (se requiere '+want+(PLAN_5M==='igual'?' en 5m y 15m':' en 15m y 5m sin ir en contra')+'). Espera a que se alineen.'}}
 const tag=TAG[T.st];
 const head=T.st==='ENTRAR'?'ENTRAR '+nm+(T.q==='óptima'?' ★':''):T.st==='CORRECCIÓN'?'ESPERAR · sesgo '+nm:T.st==='EXTENDIDO'?'NO PERSIGAS · sesgo '+nm:'CONFIRMAR · sesgo '+nm;
-return{k:T.st+'|'+dir,cls:T.st==='ENTRAR'?'up':T.st==='CORRECCIÓN'?'down':T.st==='EXTENDIDO'?'warn':'flat',dir,st:T.st,q:T.q,head,txt:ctx+'. Gatillo en 5m: '+T.tx}}
+let lvl='';if(T.st==='ENTRAR'&&t5.sh&&t5.sh.atr>0){const h=t5.sh,e=h.px,ex=dir===1?h.lo:h.hi,
+risk=Math.min(Math.max(Math.abs(e-ex)+.25*h.atr,.8*h.atr),2*h.atr),f=v=>v>=1000?v.toFixed(1):v>=1?v.toFixed(2):v.toFixed(5),
+sl=dir===1?e-risk:e+risk,t1=dir===1?e+risk:e-risk,t2=dir===1?e+2*risk:e-2*risk;
+lvl=' Niveles (ATR 5m): entrada ~'+f(e)+' · SL '+f(sl)+' ('+(risk/e*100).toFixed(2)+'%) · TP1 '+f(t1)+' (1R, mueve SL a entrada) · TP2 '+f(t2)+' (2R).';
+if(h.rv!=null&&h.rv<.8)lvl+=' ⚠ Volumen bajo ('+h.rv.toFixed(1)+'× del promedio): señal débil, mejor espera una vela con más volumen.'}
+return{k:T.st+'|'+dir,cls:T.st==='ENTRAR'?'up':T.st==='CORRECCIÓN'?'down':T.st==='EXTENDIDO'?'warn':'flat',dir,st:T.st,q:T.q,head,txt:ctx+'. Gatillo en 5m: '+T.tx+lvl}}
 function renderVAll(){const el=$('vStatus');if(!el)return;const h=ALLTF.map(iv=>{const r=vAll[iv],g=r&&r.sh&&r.s!=='ESPERAR'?TAG[r.sh.st]:null;return`<span class="vm"><i>${TFL[iv]}</i><b class="vpill ${r?r.s:''}">${r?NM[r.s]:'--'}</b><em class="vtag ${g?g[1]:'flat'}">${g?g[0]+(r.sh.q==='óptima'?' ★':''):'—'}</em></span>`}).join('');if(el._h!==h){el._h=h;el.innerHTML=h}
 const pl=$('vPlan');if(!pl)return;const P=calcPlan();const ph=P?`<div class="vplan ${P.cls}"><b>Plan de scalping · ${P.head}</b><p>${P.txt}</p></div>`:'';if(pl._h!==ph){pl._h=ph;pl.innerHTML=ph}
 if(P&&P.dir)planAlert(P);else{vPlanPend=null;if(P)vPlanLast=P.k}}
