@@ -274,7 +274,7 @@ function renderBig(){const t=$('bigToggle');if(!t)return;t.textContent=BIG.on?'A
 function bigLiq(ev,force){if(!force&&(!BIG.on||!(ev.notional>=BIG.min)))return;if(!force){if(Date.now()-ev.time>120000)return;const k=[ev.ex,ev.side,Math.round(ev.price*10),Math.round(ev.notional)].join('|');if(BIG.seen.has(k))return;BIG.seen.add(k);if(BIG.seen.size>400)BIG.seen.clear()}const a={coin:state.coin,side:ev.side,price:ev.price,notional:ev.notional,ex:ev.ex,time:Date.now()};BIG.hist.unshift(a);BIG.hist=BIG.hist.slice(0,60);bigSave();renderBig();const dir=ev.side==='LONG'?'venta forzosa ↓':'compra forzosa ↑';const msg=`${state.coin} ${ev.side} liquidado $${money(ev.notional,0)} en $${money(ev.price)} (${ev.ex||'binance'}) · ${dir}`;toast(msg,9000);vib(ev.side);beepBig(ev.side);notifyVerdict(msg,'big-'+state.coin+'-'+Date.now(),ev.side,'Liquidación grande MLL')}
 function bindBig(){$('bigToggle').onclick=()=>{BIG.on=!BIG.on;bigSave();renderBig();if(BIG.on)unlockAudio()};$('bigMin').oninput=e=>{BIG.min=+e.target.value;bigSave();renderBig()};$('bigTest').onclick=()=>{unlockAudio();bigLiq({side:'SHORT',price:state.price||0,notional:Math.max(BIG.min,100000),ex:'prueba',time:Date.now()},true)};renderBig()}
 /* ===== Alertas de veredicto (automáticas, temporalidad seleccionada) ===== */
-const TFL={'5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1D'},NM={LONG:'LONG',SHORT:'SHORT',ESPERAR:'NEUTRAL'},VPOLL=10000,VCONF=2;
+const TFL={'5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1D'},NM={LONG:'LONG',SHORT:'SHORT',ESPERAR:'NEUTRAL'},VPOLL=10000,VCONF=2,PLAN_5M='igual'; /* 'igual' = 5m y 15m deben estar en la dirección · 'noContra' = 5m puede estar NEUTRAL, pero no en contra */
 let vLast={},vPend={},vBusy={},vTimer=0,vGen=0,actx=null,wl=null;
 function unlockAudio(){try{if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch{}}
 function tone(f,t0,d,vol){const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;o.connect(g);g.connect(actx.destination);const T=actx.currentTime+t0;g.gain.setValueAtTime(0,T);g.gain.linearRampToValueAtTime(vol,T+.02);g.gain.exponentialRampToValueAtTime(.0001,T+d);o.start(T);o.stop(T+d+.05)}
@@ -307,7 +307,12 @@ for(const iv of['15m','1h','4h']){const r=vAll[iv];if(!r)continue;n++;const d=r.
 const t5=vAll['5m'];if(!t5||n<2)return null;
 const dir=sc>=1?1:sc<=-1?-1:0,nm=dir===1?'LONG':'SHORT',ctx=parts.join(' · ');
 if(!dir)return{k:'SIN SESGO',cls:'flat',dir:0,head:'Sin sesgo claro',txt:'15m, 1h y 4h no coinciden ('+ctx+'). Sin dirección dominante: evita entrar o usa solo el 5m con stop muy corto.'};
-const T=tmg(t5,dir),tag=TAG[T.st];
+let T=tmg(t5,dir);
+const want=dir===1?'LONG':'SHORT',opp=dir===1?'SHORT':'LONG',r15=vAll['15m'];
+const ok5=PLAN_5M==='igual'?t5.s===want:NM[t5.s]!==opp,ok15=!!r15&&r15.s===want;
+if(T.st==='ENTRAR'&&!(ok5&&ok15)){const f=[];if(!ok15)f.push('15m está en '+(r15?NM[r15.s]:'--'));if(!ok5)f.push('5m está en '+NM[t5.s]);
+T={st:'CORRECCIÓN',q:'',retr:T.retr,tx:'El gatillo corto es válido, pero falta confirmación: '+f.join(' y ')+' (se requiere '+want+(PLAN_5M==='igual'?' en 5m y 15m':' en 15m y 5m sin ir en contra')+'). Espera a que se alineen.'}}
+const tag=TAG[T.st];
 const head=T.st==='ENTRAR'?'ENTRAR '+nm+(T.q==='óptima'?' ★':''):T.st==='CORRECCIÓN'?'ESPERAR · sesgo '+nm:T.st==='EXTENDIDO'?'NO PERSIGAS · sesgo '+nm:'CONFIRMAR · sesgo '+nm;
 return{k:T.st+'|'+dir,cls:T.st==='ENTRAR'?'up':T.st==='CORRECCIÓN'?'down':T.st==='EXTENDIDO'?'warn':'flat',dir,st:T.st,q:T.q,head,txt:ctx+'. Gatillo en 5m: '+T.tx}}
 function renderVAll(){const el=$('vStatus');if(!el)return;const h=ALLTF.map(iv=>{const r=vAll[iv],g=r&&r.sh&&r.s!=='ESPERAR'?TAG[r.sh.st]:null;return`<span class="vm"><i>${TFL[iv]}</i><b class="vpill ${r?r.s:''}">${r?NM[r.s]:'--'}</b><em class="vtag ${g?g[1]:'flat'}">${g?g[0]+(r.sh.q==='óptima'?' ★':''):'—'}</em></span>`}).join('');if(el._h!==h){el._h=h;el.innerHTML=h}
