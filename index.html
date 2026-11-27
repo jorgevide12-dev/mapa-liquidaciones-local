@@ -53,7 +53,7 @@
 <section class="head"><div class="eyebrow">TERMINAL DE MERCADO · HTML5</div><h1>Mapa de liquidaciones</h1><p>Precio, derivados, liquidez visible y eventos de liquidación observados en Binance Futures.</p></section>
 <div class="toolbar"><select id="coin" class="select" aria-label="Criptomoneda"></select><div class="intervals" id="intervals"><button data-i="5m">5m</button><button data-i="15m" class="active">15m</button><button data-i="1h">1h</button><button data-i="4h">4h</button><button data-i="1d">1D</button></div></div>
 <section class="panel heatpanel"><div class="panel-title"><div><h2>Mapa de calor de liquidaciones estimadas</h2><div class="sub">Futuros · <span id="chartSymbol">BTCUSDT</span> · arrastra para mover · pellizca para acercar · doble toque para volver</div></div><span class="tag" id="chartState">CARGANDO</span></div>
-<div class="hctl"><div class="chips" id="exch"><button data-x="all">Todos</button><button data-x="binance">Binance</button><button data-x="bybit">Bybit</button><button data-x="okx">OKX</button></div><span class="sub" id="exState" style="font-size:9px"></span><div class="chips" id="presets"><button data-p="all">Todo</button><button data-p="scalp">Scalping</button><button data-p="swing">Swing</button></div><label class="intens">Intensidad<input id="intensity" type="range" min="0" max="100" value="37"><b id="intensityLabel">37%</b></label><button id="resetView" class="btn" style="padding:7px 10px">Ahora</button></div><div id="exShare" class="exshare" style="display:none"></div>
+<div class="hctl"><div class="chips" id="exch"><button data-x="all">Todos</button><button data-x="binance">Binance</button><button data-x="bybit">Bybit</button><button data-x="okx">OKX</button></div><span class="sub" id="exState" style="font-size:9px"></span><div class="chips" id="presets"><button data-p="all">Todo</button><button data-p="scalp">Scalping</button><button data-p="day">Day trading</button></div><label class="intens">Intensidad<input id="intensity" type="range" min="0" max="100" value="37"><b id="intensityLabel">37%</b></label><button id="resetView" class="btn" style="padding:7px 10px">Ahora</button></div><div id="exShare" class="exshare" style="display:none"></div>
 <div class="heatbox"><canvas id="chart"></canvas></div><div class="subbox"><canvas id="oiC"></canvas></div><div class="subbox"><canvas id="cvdC"></canvas></div>
 <div class="legend"><span>Densidad estimada: baja<span class="grad"></span>alta</span><span><i style="background:#2fbe64"></i>Perfil: SHORT (arriba) · <i style="background:#f0463e"></i>LONG (abajo)</span><span><i style="background:#ef6478"></i>Evento LONG real</span><span><i style="background:#20c997"></i>Evento SHORT real</span></div>
 <div class="verdict" id="verdict"></div><div class="vcap">VEREDICTO EN CADA TEMPORALIDAD · independiente del gráfico</div><div class="vmon" id="vStatus"></div><div id="vPlan"></div></section>
@@ -81,7 +81,7 @@
 (()=>{
 'use strict';
 const COINS=['BTC','XAU','ETH','SOL','XRP','BNB','DOGE','ADA','AVAX','LINK','DOT','LTC','BCH','SUI','TON','TRX','NEAR','APT','ARB','OP','FET'];
-const $=id=>document.getElementById(id);const state={coin:'BTC',interval:'15m',price:null,change:null,mark:null,events:[],candles:[],bids:[],asks:[],alerts:JSON.parse(localStorage.getItem('mll-html-alerts')||'[]'),enabled:localStorage.getItem('mll-html-enabled')!=='false',distance:+localStorage.getItem('mll-html-distance')||.35,minimum:+localStorage.getItem('mll-html-minimum')||25000,ws:[],timers:[],lastAlert:{},deferred:null,gen:0,preset:localStorage.getItem('mll-html-preset')||'all',intensity:+(localStorage.getItem('mll-html-intensity')||37),view:{count:110,offset:0},oiMap:null,ratio:.1,heat:null,clusters:null,layout:null,exch:(['all','binance','bybit','okx'].includes(localStorage.getItem('mll-html-exch'))?localStorage.getItem('mll-html-exch'):'all'),ex:{},okxCt:1};
+const $=id=>document.getElementById(id);const state={coin:'BTC',interval:'15m',price:null,change:null,mark:null,events:[],candles:[],bids:[],asks:[],alerts:JSON.parse(localStorage.getItem('mll-html-alerts')||'[]'),enabled:localStorage.getItem('mll-html-enabled')!=='false',distance:+localStorage.getItem('mll-html-distance')||.35,minimum:+localStorage.getItem('mll-html-minimum')||25000,ws:[],timers:[],lastAlert:{},deferred:null,gen:0,preset:(p=>p==='swing'?'day':['all','scalp','day'].includes(p)?p:'all')(localStorage.getItem('mll-html-preset')),intensity:+(localStorage.getItem('mll-html-intensity')||37),view:{count:110,offset:0},oiMap:null,ratio:.1,heat:null,clusters:null,layout:null,exch:(['all','binance','bybit','okx'].includes(localStorage.getItem('mll-html-exch'))?localStorage.getItem('mll-html-exch'):'all'),ex:{},okxCt:1};
 const money=(n,d=2)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:d});const sym=()=>state.coin+'USDT';const save=()=>{localStorage.setItem('mll-html-alerts',JSON.stringify(state.alerts.slice(0,150)));localStorage.setItem('mll-html-enabled',String(state.enabled));localStorage.setItem('mll-html-distance',state.distance);localStorage.setItem('mll-html-minimum',state.minimum)};
 const EVKEY='mll-html-events';
 function loadEvents(c){try{const all=JSON.parse(localStorage.getItem(EVKEY)||'{}');return(all[c]||[]).filter(e=>Date.now()-e.time<864e5)}catch{return[]}}
@@ -109,7 +109,7 @@ function renderBook(){if(!state.price||!state.bids.length||!state.asks.length){$
 function renderEvents(){ const L=evsSel();$('eventCount').textContent=L.length;$('events').innerHTML=L.length?L.slice(0,12).map(e=>`<div class="event"><span class="pill ${e.side==='LONG'?'long':'short'}">${e.side}</span><div><b>$${money(e.price)}</b><small>${new Date(e.time).toLocaleTimeString('es-MX')} · ${e.side==='LONG'?'Venta forzosa':'Compra forzosa'} · ${e.ex||'binance'}</small></div><b>$${money(e.notional,0)}</b></div>`).join(''):'<div class="empty">Aún no se han recibido eventos para este contrato. La ausencia de eventos no significa que no existan liquidaciones.</div>'}
 function checkAlerts(){if(!state.enabled||!state.price)return;for(const e of state.events){if(e.notional<state.minimum)continue;const dist=Math.abs(state.price-e.price)/state.price*100;if(dist>state.distance)continue;const key=state.coin+'-'+e.side+'-'+Math.round(e.price*100)/100;if(Date.now()-(state.lastAlert[key]||0)<600000)continue;state.lastAlert[key]=Date.now();const a={coin:state.coin,side:e.side,price:e.price,notional:e.notional,distance:dist,time:Date.now()};state.alerts.unshift(a);state.alerts=state.alerts.slice(0,150);save();renderHistory();const msg=`${state.coin} ${e.side}: precio a ${dist.toFixed(2)}% de $${money(e.price)}`;toast(msg);notifyLocal(msg,key)}}
 function renderHistory(){$('history').innerHTML=state.alerts.filter(a=>a.coin===state.coin).slice(0,8).map(a=>`<div class="event"><span class="pill ${a.side==='LONG'?'long':'short'}">${a.side}</span><div><b>$${money(a.price)}</b><small>${new Date(a.time).toLocaleString('es-MX')} · ${a.distance.toFixed(2)}% de distancia</small></div><b>$${money(a.notional,0)}</b></div>`).join('')||'<div class="empty">Todavía no hay alertas para este activo.</div>'}
-const TIERS={all:[[5,.10],[10,.25],[25,.30],[50,.20],[100,.15]],scalp:[[25,.25],[50,.40],[100,.35]],swing:[[5,.25],[10,.40],[25,.35]]};
+const TIERS={all:[[5,.10],[10,.25],[25,.30],[50,.20],[100,.15]],scalp:[[25,.25],[50,.40],[100,.35]],day:[[10,.30],[25,.40],[50,.30]]};
 const IV={'5m':3e5,'15m':9e5,'1h':36e5,'4h':144e5,'1d':864e5};const MM=.005;
 const LUT=(()=>{const st=[[0,[28,48,120]],[.25,[36,104,200]],[.45,[38,170,176]],[.62,[70,186,90]],[.8,[240,205,52]],[1,[236,52,42]]],out=[];for(let k=0;k<64;k++){const t=k/63;let a=st[0],b=st[st.length-1];for(let s=0;s<st.length-1;s++)if(t>=st[s][0]&&t<=st[s+1][0]){a=st[s];b=st[s+1];break}const u=(t-a[0])/(b[0]-a[0]||1);out.push('rgb('+a[1].map((x,j)=>Math.round(x+(b[1][j]-x)*u)).join(',')+')')}return out})();
 let raf=0,heatTimer=0;
@@ -177,7 +177,7 @@ if(P===1){
  else R('ESPERAR','Baja','Precio lateral y sin flujo claro. Mejor esperar ruptura.');
 }
 if(!hasO&&conf==='Alta')conf='Media';
-/* ---- Ventana corta (timing de entrada para scalping) ---- */
+/* ---- Ventana corta (timing de entrada para scalping y day trading) ---- */
 let sh;
 {const ks=Math.min(SWIN[iv]||3,N-1),a3=b-ks,pt3=pt*.5;
 const pc3=C[b].c/C[a3].c-1;let vol3=0;for(let i=a3+1;i<=b;i++)vol3+=C[i].q;
@@ -266,7 +266,7 @@ cv.addEventListener('pointermove',e=>{if(!P.has(e.pointerId))return;P.set(e.poin
 const up=e=>{P.delete(e.pointerId);begin()};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
 cv.addEventListener('wheel',e=>{e.preventDefault();state.view.count*=e.deltaY>0?1.12:.89;scheduleDraw()},{passive:false});
 const reset=()=>{state.view.offset=0;state.view.count=110;scheduleDraw()};cv.addEventListener('dblclick',reset);$('resetView').onclick=reset;
-const pb=document.querySelectorAll('#presets button');pb.forEach(b=>{b.classList.toggle('active',b.dataset.p===state.preset);b.onclick=()=>{state.preset=b.dataset.p;localStorage.setItem('mll-html-preset',state.preset);pb.forEach(x=>x.classList.toggle('active',x===b));computeHeat();scheduleDraw()}});
+const pb=document.querySelectorAll('#presets button');pb.forEach(b=>{b.classList.toggle('active',b.dataset.p===state.preset);b.onclick=()=>{state.preset=b.dataset.p;localStorage.setItem('mll-html-preset',state.preset);pb.forEach(x=>x.classList.toggle('active',x===b));vPlanLast=null;vPlanPend=null;renderVAll();computeHeat();scheduleDraw()}});
 const it=$('intensity');it.value=state.intensity;$('intensityLabel').textContent=state.intensity+'%';it.oninput=()=>{state.intensity=+it.value;$('intensityLabel').textContent=it.value+'%';localStorage.setItem('mll-html-intensity',it.value);scheduleDraw()}}
 
 /* ===== Alerta de liquidación grande ===== */
@@ -305,31 +305,33 @@ const ALLTF=['5m','15m','1h','4h','1d'];
 let vAll={},vAllBusy=false,vAllTimer=0,vAllGen=0;
 const TAG={ENTRAR:['ENTRAR','up'],CORRECCIÓN:['ESPERAR','down'],EXTENDIDO:['NO PERSEGUIR','warn'],NEUTRO:['CONFIRMAR','flat']};
 let vPlanLast=null,vPlanPend=null;
-function calcPlan(){const W={'15m':1,'1h':2,'4h':1},CF={Alta:1,Media:.75,Baja:.5};let sc=0,parts=[],n=0;
-for(const iv of['15m','1h','4h']){const r=vAll[iv];if(!r)continue;n++;const d=r.s==='LONG'?1:r.s==='SHORT'?-1:0;sc+=d*W[iv]*(CF[r.conf]||.5);parts.push(TFL[iv]+' '+NM[r.s])}
-const t5=vAll['5m'];if(!t5||n<2)return null;
+const PLANS={scalp:{name:'scalping',bias:['15m','1h','4h'],W:{'15m':1,'1h':2,'4h':1},trig:'5m',conf:'15m'},day:{name:'day trading',bias:['1h','4h','1d'],W:{'1h':2,'4h':1,'1d':1},trig:'15m',conf:'1h'}};
+function planCfg(){return state.preset==='day'?PLANS.day:PLANS.scalp}
+function calcPlan(){const Q=planCfg(),W=Q.W,CF={Alta:1,Media:.75,Baja:.5};let sc=0,parts=[],n=0;
+for(const iv of Q.bias){const r=vAll[iv];if(!r)continue;n++;const d=r.s==='LONG'?1:r.s==='SHORT'?-1:0;sc+=d*W[iv]*(CF[r.conf]||.5);parts.push(TFL[iv]+' '+NM[r.s])}
+const t5=vAll[Q.trig];if(!t5||n<2)return null;
 const dir=sc>=1?1:sc<=-1?-1:0,nm=dir===1?'LONG':'SHORT',ctx=parts.join(' · ');
-if(!dir)return{k:'SIN SESGO',cls:'flat',dir:0,head:'Sin sesgo claro',txt:'15m, 1h y 4h no coinciden ('+ctx+'). Sin dirección dominante: evita entrar o usa solo el 5m con stop muy corto.'};
+if(!dir)return{k:'SIN SESGO',cls:'flat',dir:0,head:'Sin sesgo claro',txt:Q.bias.map(i=>TFL[i]).join(', ')+' no coinciden ('+ctx+'). Sin dirección dominante: evita entrar o usa solo el '+TFL[Q.trig]+' con stop corto.'};
 let T=tmg(t5,dir);
-const want=dir===1?'LONG':'SHORT',opp=dir===1?'SHORT':'LONG',r15=vAll['15m'];
+const want=dir===1?'LONG':'SHORT',opp=dir===1?'SHORT':'LONG',r15=vAll[Q.conf];
 const ok5=PLAN_5M==='igual'?t5.s===want:NM[t5.s]!==opp,ok15=!!r15&&r15.s===want;
-if(T.st==='ENTRAR'&&!(ok5&&ok15)){const f=[];if(!ok15)f.push('15m está en '+(r15?NM[r15.s]:'--'));if(!ok5)f.push('5m está en '+NM[t5.s]);
-T={st:'CORRECCIÓN',q:'',retr:T.retr,tx:'El gatillo corto es válido, pero falta confirmación: '+f.join(' y ')+' (se requiere '+want+(PLAN_5M==='igual'?' en 5m y 15m':' en 15m y 5m sin ir en contra')+'). Espera a que se alineen.'}}
+if(T.st==='ENTRAR'&&!(ok5&&ok15)){const f=[];if(!ok15)f.push(TFL[Q.conf]+' está en '+(r15?NM[r15.s]:'--'));if(!ok5)f.push(TFL[Q.trig]+' está en '+NM[t5.s]);
+T={st:'CORRECCIÓN',q:'',retr:T.retr,tx:'El gatillo corto es válido, pero falta confirmación: '+f.join(' y ')+' (se requiere '+want+(PLAN_5M==='igual'?' en '+TFL[Q.trig]+' y '+TFL[Q.conf]:' en '+TFL[Q.conf]+' y '+TFL[Q.trig]+' sin ir en contra')+'). Espera a que se alineen.'}}
 const tag=TAG[T.st];
 const head=T.st==='ENTRAR'?'ENTRAR '+nm+(T.q==='óptima'?' ★':''):T.st==='CORRECCIÓN'?'ESPERAR · sesgo '+nm:T.st==='EXTENDIDO'?'NO PERSIGAS · sesgo '+nm:'CONFIRMAR · sesgo '+nm;
 let lvl='';if(T.st==='ENTRAR'&&t5.sh&&t5.sh.atr>0){const h=t5.sh,e=h.px,ex=dir===1?h.lo:h.hi,
 risk=Math.min(Math.max(Math.abs(e-ex)+.25*h.atr,.8*h.atr),2*h.atr),f=v=>v>=1000?v.toFixed(1):v>=1?v.toFixed(2):v.toFixed(5),
 sl=dir===1?e-risk:e+risk,t1=dir===1?e+risk:e-risk,t2=dir===1?e+2*risk:e-2*risk;
-lvl=' Niveles (ATR 5m): entrada ~'+f(e)+' · SL '+f(sl)+' ('+(risk/e*100).toFixed(2)+'%) · TP1 '+f(t1)+' (1R, mueve SL a entrada) · TP2 '+f(t2)+' (2R).';
+lvl=' Niveles (ATR '+TFL[Q.trig]+'): entrada ~'+f(e)+' · SL '+f(sl)+' ('+(risk/e*100).toFixed(2)+'%) · TP1 '+f(t1)+' (1R, mueve SL a entrada) · TP2 '+f(t2)+' (2R).';
 if(h.rv!=null&&h.rv<.8)lvl+=' ⚠ Volumen bajo ('+h.rv.toFixed(1)+'× del promedio): señal débil, mejor espera una vela con más volumen.'}
-return{k:T.st+'|'+dir,cls:T.st==='ENTRAR'?'up':T.st==='CORRECCIÓN'?'down':T.st==='EXTENDIDO'?'warn':'flat',dir,st:T.st,q:T.q,head,txt:ctx+'. Gatillo en 5m: '+T.tx+lvl}}
+return{k:Q.name+'|'+T.st+'|'+dir,cls:T.st==='ENTRAR'?'up':T.st==='CORRECCIÓN'?'down':T.st==='EXTENDIDO'?'warn':'flat',dir,st:T.st,q:T.q,head,txt:ctx+'. Gatillo en '+TFL[Q.trig]+': '+T.tx+lvl}}
 function renderVAll(){const el=$('vStatus');if(!el)return;const h=ALLTF.map(iv=>{const r=vAll[iv],g=r&&r.sh&&r.s!=='ESPERAR'?TAG[r.sh.st]:null;return`<span class="vm"><i>${TFL[iv]}</i><b class="vpill ${r?r.s:''}">${r?NM[r.s]:'--'}</b><em class="vtag ${g?g[1]:'flat'}">${g?g[0]+(r.sh.q==='óptima'?' ★':''):'—'}</em></span>`}).join('');if(el._h!==h){el._h=h;el.innerHTML=h}
-const pl=$('vPlan');if(!pl)return;const P=calcPlan();const ph=P?`<div class="vplan ${P.cls}"><b>Plan de scalping · ${P.head}</b><p>${P.txt}</p></div>`:'';if(pl._h!==ph){pl._h=ph;pl.innerHTML=ph}
+const pl=$('vPlan');if(!pl)return;const P=calcPlan();const ph=P?`<div class="vplan ${P.cls}"><b>Plan de ${planCfg().name} · ${P.head}</b><p>${P.txt}</p></div>`:'';if(pl._h!==ph){pl._h=ph;pl.innerHTML=ph}
 if(P&&P.dir)planAlert(P);else{vPlanPend=null;if(P)vPlanLast=P.k}}
 function planAlert(P){if(P.k===vPlanLast){vPlanPend=null;return}
 if(!vPlanPend||vPlanPend.k!==P.k)vPlanPend={k:P.k,n:1};else vPlanPend.n++;
 if(vPlanPend.n<VCONF)return;const prev=vPlanLast;vPlanLast=P.k;vPlanPend=null;
-if(prev!==null&&P.st==='ENTRAR'){const v=P.dir===1?'LONG':'SHORT',msg=`${state.coin}: sesgo ${v} (15m/1h/4h) + gatillo 5m a favor → ENTRAR${P.q==='óptima'?' · punto óptimo tras retroceso':''}`;toast(msg,9000);vib(v);beep(v);notifyVerdict(msg,'plan-'+state.coin,v,'Entrada MLL')}}
+if(prev!==null&&P.st==='ENTRAR'){const v=P.dir===1?'LONG':'SHORT',msg=`${state.coin}: sesgo ${v} (${planCfg().bias.map(i=>TFL[i]).join('/')}) + gatillo ${TFL[planCfg().trig]} a favor → ENTRAR${P.q==='óptima'?' · punto óptimo tras retroceso':''}`;toast(msg,9000);vib(v);beep(v);notifyVerdict(msg,'plan-'+state.coin,v,'Entrada MLL')}}
 async function vAllRun(){if(vAllBusy||document.hidden)return;vAllBusy=true;const coin=state.coin,gen=vAllGen,base='https://fapi.binance.com';
 try{const res=await Promise.all(ALLTF.map(async iv=>{try{const m=IV[iv],[kl,oh]=await Promise.all([get(`${base}/fapi/v1/klines?symbol=${coin}USDT&interval=${iv}&limit=60`),get(`${base}/futures/data/openInterestHist?symbol=${coin}USDT&period=${iv}&limit=60`)]);
 const C=kl.map(x=>({t:x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5],q:+x[7],tb:+x[9]})),lv=new Map(oh.map(x=>[Math.floor(+x.timestamp/m)*m,+x.sumOpenInterestValue])),N=C.length,cvdL=new Array(N),oiL=new Array(N).fill(null);let cum=0,prev=null;
